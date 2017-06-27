@@ -37,12 +37,12 @@ class Player(pygame.sprite.Sprite):
          self.change_x = 0 #player speed left and right, starts at 0
          self.change_y = 0 #player speed up and down, starts at 0
          self.size = 20 #player rectangle size
-         self.colour = RED
+         self.colour = RED #set player colour
          self.image = pygame.Surface([self.size, self.size])
          self.image.fill(self.colour)
          self.rect = self.image.get_rect()
-         self.rect.x = start_x
-         self.rect.y = start_y
+         self.rect.x = start_x #player x position
+         self.rect.y = start_y #player y position
      def move_map(self):
          self.rect.x += self.change_x
          self.rect.y += self.change_y
