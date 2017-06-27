@@ -10,9 +10,9 @@ WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 RED = (255, 0, 0)
 SEABLUE = (0, 191, 255)
-GRASSGREEN = (0, 204, 0)
-SAND = (204, 204, 0)
-ROCK = (128, 128, 128)
+GRASSGREEN = (0, 204, 0) #colour for green grassy islands
+SAND = (204, 204, 0) #colour for beach islands
+ROCK = (128, 128, 128) #colour for rock islands
 island_material = (GRASSGREEN, SAND, ROCK) #tuple for the island material
 
 #initialise PI, for some ellipses and arcs
