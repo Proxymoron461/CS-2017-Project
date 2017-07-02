@@ -44,9 +44,9 @@ class Player(pygame.sprite.Sprite):
          self.rect = self.image.get_rect()
          self.rect.x = start_x #player x position
          self.rect.y = start_y #player y position
-         self.attack_size = 15
-         self.facing_x = 0
-         self.facing_y = 0
+         self.enemies_killed = 0
+         self.last_x = 0 #most recent x direction of player
+         self.last_y = -1 #most recent y direction of player
      def move_map(self):
          self.rect.x += self.change_x
          self.rect.y += self.change_y
@@ -55,29 +55,7 @@ class Player(pygame.sprite.Sprite):
          self.rect.x += self.change_x
          self.rect.y += self.change_y
      def draw(self, screen):
-         pygame.draw.rect(screen, self.colour, self.rect)
-     def attack(self, screen):
-         #code to put rectangle x value at area where character is facing
-         if self.change_x > 0:
-              self.facing_x = self.rect.x + self.size
-         elif self.change_x < 0:
-              self.facing_x = self.rect.x - self.attack_size
-         else:
-              self.change_x = self.rect.x + (self.size / 2)
-
-         #code to put rectangle y value at area where character is facing     
-         if self.change_y > 0:
-              self.facing_y = self.rect.y + self.size
-         elif self.change_y < 0:
-              self.facing_y = self.rect.y - self.attack_size
-         else:
-              self.change_y = self.rect.y + (self.size / 2)
-              
-         self.sword_rect = [self.facing_x, self.facing_y, self.attack_size, self.attack_size]
-         pygame.draw.rect(screen, BLACK, self.sword_rect)
-
-         if pygame.sprite.collide_rect(player_obj.sword_rect, enemy_obj):
-              enemy_obj.health -= 1
+         pygame.draw.rect(screen, self.colour, self.rect)         
 
 #initialise player object
 player_obj = Player(250, 250, 20)
@@ -135,6 +113,46 @@ class Enemy(pygame.sprite.Sprite):
 #initialise enemy object
 enemy_obj = Enemy(20, ENEMY_PURPLE, 350, 250)
 
+#initialise sword class, for attacking
+class Sword(pygame.sprite.Sprite):
+     def __init__(self, size):
+          super().__init__()
+          self.size = size
+          self.facing_x = 0
+          self.facing_y = 0
+          self.colour = BLACK
+          self.image = pygame.Surface([self.size, self.size])
+          self.image.fill(self.colour)
+          self.rect = self.image.get_rect()
+          self.rect.x = player_obj.rect.x + player_obj.size
+          self.rect.y = player_obj.rect.y + player_obj.size
+     def draw(self, screen):
+          pygame.draw.rect(screen, self.colour, self.rect)
+     def attack(self):
+          #code to put rectangle x value at area where character is facing
+          if player_obj.last_x > 0:
+              self.rect.x = player_obj.rect.x + player_obj.size
+          elif player_obj.last_x < 0:
+              self.rect.x = player_obj.rect.x - self.size
+          elif player_obj.last_x == 0:
+              self.rect.x = player_obj.rect.x + (player_obj.size / 2) - (self.size / 2)
+
+          #code to put rectangle y value at area where character is facing     
+          if player_obj.last_y > 0:
+              self.rect.y = player_obj.rect.y + player_obj.size
+          elif player_obj.last_y < 0:
+              self.rect.y = player_obj.rect.y - self.size
+          elif player_obj.last_y == 0:
+              self.rect.y = player_obj.rect.y + (player_obj.size / 2) - (self.size / 2)
+              
+          #create list of enemies hit by player sword
+          enemies_hit_list = pygame.sprite.spritecollide(self, enemies, True)
+          for enemy_obj in enemies_hit_list:
+              player_obj.enemies_killed += 1
+
+#create sword object
+sword_obj = Sword(15)
+
 #miscellaneous values
 map_overview = True #boolean for when player is in map
 island_overview = False #boolean for when player is on first island
@@ -146,6 +164,9 @@ off_island2 = False #boolean for when player gets off second island
 islands = pygame.sprite.Group() #initialise list of islands
 islands.add(island_obj) #add first island object to list of islands
 islands.add(island2_obj) #add second island object to list of islands
+enemies = pygame.sprite.Group() #create list of enemies
+enemies.add(enemy_obj) #add enemy to list of enemies
+sword_draw = False #boolean for if sword should be drawn
 
 #main program loop setup
 done = False
@@ -159,14 +180,23 @@ while not done:
         if event.type == pygame.KEYDOWN: #if key is pressed, movement starts
             if event.key == pygame.K_UP or event.key == pygame.K_w:
                 player_obj.change_y = -5
+                player_obj.last_y = -1
+                player_obj.last_x = 0
             if event.key == pygame.K_DOWN or event.key == pygame.K_s:
                 player_obj.change_y = 5
+                player_obj.last_y = 1
+                player_obj.last_x = 0
             if event.key == pygame.K_LEFT or event.key == pygame.K_a:
                 player_obj.change_x = -5
+                player_obj.last_y = 0
+                player_obj.last_x = -1
             if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                 player_obj.change_x = 5
+                player_obj.last_y = 0
+                player_obj.last_x = 1
             if event.key == pygame.K_SPACE:
-                player_obj.attack(screen)
+                sword_draw = True
+                sword_obj.attack()
         if event.type == pygame.KEYUP: #if key is released, movement stops
             if event.key == pygame.K_UP or event.key == pygame.K_DOWN or event.key == pygame.K_w or event.key == pygame.K_s:
                 player_obj.change_y = 0
@@ -279,12 +309,19 @@ while not done:
              map_overview = True
              off_island2 = True
 
+        #code to spawn enemies on island
+        enemies.draw(screen)
+
     #code to check if enemies are dead or not
     if enemy_obj.health <= 0:
          enemy_obj.dead = True
 
     #display player movements to screen
     player_obj.draw(screen)
+
+    #draw sword to screen
+    if sword_draw:
+         sword_obj.draw(screen)
     
     #display output and framerate
     pygame.display.flip() #updates screen with what's drawn
