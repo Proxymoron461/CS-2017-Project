@@ -32,11 +32,11 @@ pygame.display.set_caption("Comp Sci Project") #sets the window title
 
 #initialise player class, using rectangle for now
 class Player(pygame.sprite.Sprite):
-     def __init__(self, start_x, start_y):
+     def __init__(self, start_x, start_y, size):
          super().__init__() 
          self.change_x = 0 #player speed left and right, starts at 0
          self.change_y = 0 #player speed up and down, starts at 0
-         self.size = 20 #player rectangle size
+         self.size = size #player rectangle size
          self.colour = RED #set player colour
          self.image = pygame.Surface([self.size, self.size])
          self.image.fill(self.colour)
@@ -54,7 +54,7 @@ class Player(pygame.sprite.Sprite):
          pygame.draw.rect(screen, self.colour, self.rect)
 
 #initialise player object
-player_obj = Player(250, 250)
+player_obj = Player(250, 250, 20)
 
 #initialise island class
 class Island(pygame.sprite.Sprite):
@@ -81,6 +81,25 @@ class Island(pygame.sprite.Sprite):
 
 #initialise island object
 island_obj = Island(300, 300, 400, 100)
+
+#initialise enemy class, intended as parent class for future enemies
+class Enemy(pygame.sprite.Sprite):
+     def __init__(self, size, colour,start_x, start_y):
+          super().__init__()
+          self.change_x = 0 #initial x speed
+          self.change_y = 0 #initial y speed
+          self.size = size #set size
+          self.colour = colour #set colour, may delegate to enemy sub-class in future
+          self.image = pygame.Surface([self.size, self.size])
+          self.image.fill(self.colour)
+          self.rect = self.image.get_rect()
+          self.rect.x = start_x #enemy x position
+          self.rect.y = start_y #enemy y position
+     def move(self):
+          self.rect.x += self.change_x
+          self.rect.y += self.change_y
+     def draw(self, screen):
+          pygame.draw.rect(screen, self.colour, self.rect)
 
 #miscellaneous values
 map_overview = True #boolean for when player is in map
