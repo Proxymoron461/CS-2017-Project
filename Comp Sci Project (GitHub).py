@@ -44,6 +44,9 @@ class Player(pygame.sprite.Sprite):
          self.rect = self.image.get_rect()
          self.rect.x = start_x #player x position
          self.rect.y = start_y #player y position
+         self.attack_size = 15
+         self.facing_x = 0
+         self.facing_y = 0
      def move_map(self):
          self.rect.x += self.change_x
          self.rect.y += self.change_y
@@ -53,6 +56,28 @@ class Player(pygame.sprite.Sprite):
          self.rect.y += self.change_y
      def draw(self, screen):
          pygame.draw.rect(screen, self.colour, self.rect)
+     def attack(self, screen):
+         #code to put rectangle x value at area where character is facing
+         if self.change_x > 0:
+              self.facing_x = self.rect.x + self.size
+         elif self.change_x < 0:
+              self.facing_x = self.rect.x - self.attack_size
+         else:
+              self.change_x = self.rect.x + (self.size / 2)
+
+         #code to put rectangle y value at area where character is facing     
+         if self.change_y > 0:
+              self.facing_y = self.rect.y + self.size
+         elif self.change_y < 0:
+              self.facing_y = self.rect.y - self.attack_size
+         else:
+              self.change_y = self.rect.y + (self.size / 2)
+              
+         self.sword_rect = [self.facing_x, self.facing_y, self.attack_size, self.attack_size]
+         pygame.draw.rect(screen, BLACK, self.sword_rect)
+
+         if pygame.sprite.collide_rect(player_obj.sword_rect, enemy_obj):
+              enemy_obj.health -= 1
 
 #initialise player object
 player_obj = Player(250, 250, 20)
@@ -87,7 +112,7 @@ island2_obj = Island(300, 300, 200, 300)
 
 #initialise enemy class, intended as parent class for future enemies
 class Enemy(pygame.sprite.Sprite):
-     def __init__(self, size, colour,start_x, start_y):
+     def __init__(self, size, colour, start_x, start_y):
           super().__init__()
           self.change_x = 0 #initial x speed
           self.change_y = 0 #initial y speed
@@ -98,11 +123,17 @@ class Enemy(pygame.sprite.Sprite):
           self.rect = self.image.get_rect()
           self.rect.x = start_x #enemy x position
           self.rect.y = start_y #enemy y position
+          self.health = 1 #integer for health value, each hit does damage of 1
+          self.dead = False #boolean for if enemy is dead or not
      def move(self):
           self.rect.x += self.change_x
           self.rect.y += self.change_y
      def draw(self, screen):
-          pygame.draw.rect(screen, self.colour, self.rect)
+          if not self.dead:
+               pygame.draw.rect(screen, self.colour, self.rect)
+
+#initialise enemy object
+enemy_obj = Enemy(20, ENEMY_PURPLE, 350, 250)
 
 #miscellaneous values
 map_overview = True #boolean for when player is in map
@@ -134,6 +165,8 @@ while not done:
                 player_obj.change_x = -5
             if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                 player_obj.change_x = 5
+            if event.key == pygame.K_SPACE:
+                player_obj.attack(screen)
         if event.type == pygame.KEYUP: #if key is released, movement stops
             if event.key == pygame.K_UP or event.key == pygame.K_DOWN or event.key == pygame.K_w or event.key == pygame.K_s:
                 player_obj.change_y = 0
@@ -245,6 +278,10 @@ while not done:
              island2_overview = False
              map_overview = True
              off_island2 = True
+
+    #code to check if enemies are dead or not
+    if enemy_obj.health <= 0:
+         enemy_obj.dead = True
 
     #display player movements to screen
     player_obj.draw(screen)
