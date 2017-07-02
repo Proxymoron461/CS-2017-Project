@@ -63,8 +63,8 @@ class Island(pygame.sprite.Sprite):
           super().__init__()
           self.height = height
           self.width = width
-          self.width_map = width / 5
-          self.height_map = height / 5
+          self.width_map = width / 4
+          self.height_map = height / 4
           self.position_x_close = (WIDTH / 2) - (self.width / 2)
           self.position_y_close = (HEIGHT / 2) - (self.height / 2)
           self.colour = random.choice(island_material)
@@ -81,8 +81,8 @@ class Island(pygame.sprite.Sprite):
           pygame.draw.rect(screen, self.colour, self.rect)
 
 #initialise island objects
-island_obj = Island(300, 300, 400, 100)
-island2_obj = Island(200, 200, 200, 300)
+island_obj = Island(200, 200, 400, 100)
+island2_obj = Island(300, 300, 200, 300)
 
 
 #initialise enemy class, intended as parent class for future enemies
