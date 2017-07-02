@@ -197,6 +197,7 @@ while not done:
             if event.key == pygame.K_SPACE:
                 sword_draw = True
                 sword_obj.attack()
+                sword_delay = pygame.time.get_ticks() #amount of milliseconds before sword sprite disappears
         if event.type == pygame.KEYUP: #if key is released, movement stops
             if event.key == pygame.K_UP or event.key == pygame.K_DOWN or event.key == pygame.K_w or event.key == pygame.K_s:
                 player_obj.change_y = 0
@@ -322,6 +323,8 @@ while not done:
     #draw sword to screen
     if sword_draw:
          sword_obj.draw(screen)
+         if pygame.time.get_ticks() - sword_delay >= 150:
+              sword_draw = False
     
     #display output and framerate
     pygame.display.flip() #updates screen with what's drawn
