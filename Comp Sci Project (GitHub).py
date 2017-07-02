@@ -13,6 +13,7 @@ SEABLUE = (0, 191, 255)
 GRASSGREEN = (0, 204, 0) #colour for green grassy islands
 SAND = (204, 204, 0) #colour for beach islands
 ROCK = (128, 128, 128) #colour for rock islands
+ENEMY_PURPLE = (255, 51, 255) # stand-in colour for enemies
 island_material = (GRASSGREEN, SAND, ROCK) #tuple for the island material
 
 #initialise PI, for some ellipses and arcs
@@ -47,7 +48,7 @@ class Player(pygame.sprite.Sprite):
          self.rect.x += self.change_x
          self.rect.y += self.change_y
      def move_close(self):
-         self.rect.clamp_ip(island_obj.boundary_rect)
+         self.rect.clamp_ip(island_rect)
          self.rect.x += self.change_x
          self.rect.y += self.change_y
      def draw(self, screen):
@@ -79,8 +80,10 @@ class Island(pygame.sprite.Sprite):
      def draw_map(self, screen):
           pygame.draw.rect(screen, self.colour, self.rect)
 
-#initialise island object
+#initialise island objects
 island_obj = Island(300, 300, 400, 100)
+island2_obj = Island(200, 200, 200, 300)
+
 
 #initialise enemy class, intended as parent class for future enemies
 class Enemy(pygame.sprite.Sprite):
@@ -103,12 +106,15 @@ class Enemy(pygame.sprite.Sprite):
 
 #miscellaneous values
 map_overview = True #boolean for when player is in map
-island_overview = False #boolean for when player is on island
+island_overview = False #boolean for when player is on first island
+island2_overview = False #boolean for when player is on second island
 dungeon_overview = False #boolean for when player is in dungeon
 on_island = False #boolean for when player gets onto island
-off_island = False #boolean for when player gets off island
+off_island = False #boolean for when player gets off first island
+off_island2 = False #boolean for when player gets off second island
 islands = pygame.sprite.Group() #initialise list of islands
-islands.add(island_obj) #add island object to list of islands
+islands.add(island_obj) #add first island object to list of islands
+islands.add(island2_obj) #add second island object to list of islands
 
 #main program loop setup
 done = False
@@ -140,6 +146,8 @@ while not done:
          screen.fill(SEABLUE)
     if island_overview:
          screen.fill(SEABLUE)
+    if island2_overview:
+         screen.fill(SEABLUE)
     if dungeon_overview:
          screen.fill(ROCK)
 
@@ -150,18 +158,26 @@ while not done:
     if map_overview:
          #have player move (map overview) and draw it to screen
          player_obj.move_map()
-         
+
          island_obj.draw_map(screen)
-         #what happens when player leaves island
+         island2_obj.draw_map(screen)
+         
+         #what happens when player leaves first island
          if off_island:
               player_obj.rect.y = island_obj.rect.y + island_obj.height_map + 5
               player_obj.rect.x = island_obj.rect.x + (island_obj.width_map / 2) - (player_obj.size / 2)
-              island_boundary_north = False
-              island_boundary_west = False
-              island_boundary_east = False
               player_obj.change_x = 0
               player_obj.change_y = 0
               off_island = False
+              pygame.time.delay(200)
+
+         #what happens when player leaves second island
+         if off_island2:
+              player_obj.rect.y = island2_obj.rect.y + island2_obj.height_map + 5
+              player_obj.rect.x = island2_obj.rect.x + (island2_obj.width_map / 2) - (player_obj.size / 2)
+              player_obj.change_x = 0
+              player_obj.change_y = 0
+              off_island2 = False
               pygame.time.delay(200)
 
          #if player is in map/sailing screen and they go off the edge, make them reappear on the opposite one
@@ -174,25 +190,30 @@ while not done:
          elif player_obj.rect.y > HEIGHT:
               player_obj.rect.y = (0 - player_obj.size) - 5
 
-         #collision code for if player lands on island in map overview
-         if pygame.sprite.spritecollide(player_obj, islands, False):
+         #code for collision detection with islands
+         if pygame.sprite.collide_rect(player_obj, island_obj):
               map_overview = False
               island_overview = True
               on_island = True
+              island_rect = island_obj.boundary_rect
 
-    #while on island screen
+         if pygame.sprite.collide_rect(player_obj, island2_obj):
+              map_overview = False
+              island2_overview = True
+              on_island = True
+              island_rect = island2_obj.boundary_rect
+
+    #while on first island screen
     if island_overview:
         #have player move (island overview) within island boundaries
         player_obj.move_close()
         
         island_obj.draw_close(screen)
+        
         #what happens when player spawns on island
         if on_island:
             player_obj.rect.y = island_obj.position_y_close + (4 * (island_obj.height / 5))
             player_obj.rect.x = island_obj.position_x_close + (island_obj.width / 2) - (player_obj.size / 2)
-            island_boundary_north = True
-            island_boundary_west = True
-            island_boundary_east = True
             player_obj.change_x = 0
             player_obj.change_y = 0
             on_island = False
@@ -204,13 +225,36 @@ while not done:
              map_overview = True
              off_island = True
 
+    #while on second island screen
+    if island2_overview:
+        #have player move (island overview) within island boundaries
+        player_obj.move_close()
+        
+        island2_obj.draw_close(screen)
+        #what happens when player spawns on island
+        if on_island:
+            player_obj.rect.y = island2_obj.position_y_close + (4 * (island2_obj.height / 5))
+            player_obj.rect.x = island2_obj.position_x_close + (island2_obj.width / 2) - (player_obj.size / 2)
+            player_obj.change_x = 0
+            player_obj.change_y = 0
+            on_island = False
+            pygame.time.delay(200)
+
+        #make player leave if exit bottom of island
+        if player_obj.rect.y + player_obj.size >= island2_obj.position_y_close + island2_obj.height:
+             island2_overview = False
+             map_overview = True
+             off_island2 = True
+
     #display player movements to screen
     player_obj.draw(screen)
     
     #display output and framerate
     pygame.display.flip() #updates screen with what's drawn
     if island_overview:
-         pygame.display.update(island_obj.rect)
+         pygame.display.update(island_obj.rect) #if player on an island, the screen will only update what is on the island to save memory
+    if island2_overview:
+         pygame.display.update(island2_obj.rect)
     clock.tick(60) #limits to 60 frames per second
 
 #closes window, exits game
