@@ -84,15 +84,22 @@ class Island(pygame.sprite.Sprite):
           self.rect.y = position_y
           self.rect_close = [self.position_x_close, self.position_y_close, self.height, self.width] #rectangle for displaying island up close
           self.boundary_rect = [self.position_x_close + 5, self.position_y_close + 5, self.height - 10, self.width - 10] #rectangle for keeping player in island
+          self.grid = [[0 for x in range(width // 10)] for y in range(height // 10)]
+          self.grid_margin = 10
      def draw_close(self, screen): #drawing code for when player is on island
           pygame.draw.rect(screen, self.colour, self.rect_close)
      def draw_map(self, screen):
           pygame.draw.rect(screen, self.colour, self.rect)
+     def find_player(self):
+          self.player_x = (player_obj.rect.x - self.position_x_close)
+          self.player_y = (player_obj.rect.y - self.position_y_close)
+          self.grid_player_x = self.player_x // self.grid_margin
+          self.grid_player_y = self.player_y // self.grid_margin
+          return [self.grid_player_x, self.grid_player_y]
 
 #initialise island objects
 island_obj = Island(200, 200, 400, 100)
 island2_obj = Island(300, 300, 200, 300)
-
 
 #initialise enemy class, intended as parent class for future enemies
 class Enemy(pygame.sprite.Sprite):
