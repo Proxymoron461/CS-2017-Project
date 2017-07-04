@@ -39,6 +39,7 @@ class Player(pygame.sprite.Sprite):
          self.change_y = 0 #player speed up and down, starts at 0
          self.size = size #player rectangle size
          self.colour = RED #set player colour
+         self.damage_colour = BLACK #set colour to be displayed when damage taken
          self.image = pygame.Surface([self.size, self.size])
          self.image.fill(self.colour)
          self.rect = self.image.get_rect()
@@ -47,15 +48,20 @@ class Player(pygame.sprite.Sprite):
          self.enemies_killed = 0
          self.last_x = 0 #most recent x direction of player
          self.last_y = -1 #most recent y direction of player
+         self.health = 5 #integer for player health
      def move_map(self):
          self.rect.x += self.change_x
          self.rect.y += self.change_y
      def move_close(self):
-         self.rect.clamp_ip(island_rect)
+         self.rect.clamp_ip(island_rect) #keep player on island
          self.rect.x += self.change_x
          self.rect.y += self.change_y
      def draw(self, screen):
-         pygame.draw.rect(screen, self.colour, self.rect)         
+         pygame.draw.rect(screen, self.colour, self.rect)
+     def draw_damage(self, screen):
+         pygame.draw.rect(screen, self.damage_colour, self.rect)
+     def take_damage(self):
+         self.health -= enemy_obj.damage #take away enemy damage from player health
 
 #initialise player object
 player_obj = Player(250, 250, 20)
@@ -103,7 +109,18 @@ class Enemy(pygame.sprite.Sprite):
           self.rect.y = start_y #enemy y position
           self.health = 1 #integer for health value, each hit does damage of 1
           self.dead = False #boolean for if enemy is dead or not
+          self.damage = 1 #boolean for damage enemy does to player health
      def move(self):
+          self.rect.clamp_ip(island_rect) #keep enemy on island
+          #code to move enemy towards player, facing them
+          if player_obj.rect.x > self.rect.x:
+               self.change_x = 1.5
+          elif player_obj.rect.x < self.rect.x:
+               self.change_x = -1.5
+          if player_obj.rect.y > self.rect.y:
+               self.change_y = 1.5
+          elif player_obj.rect.y < self.rect.y:
+               self.change_y = -1.5
           self.rect.x += self.change_x
           self.rect.y += self.change_y
      def draw(self, screen):
@@ -292,10 +309,17 @@ while not done:
 
     #while on second island screen
     if island2_overview:
-        #have player move (island overview) within island boundaries
-        player_obj.move_close()
-        
+        #draw island
         island2_obj.draw_close(screen)
+                
+        #code to spawn enemies on island
+        enemies.draw(screen)
+
+        #have player move (on an island)
+        player_obj.move_close()
+        #have enemy move
+        enemy_obj.move()
+        
         #what happens when player spawns on island
         if on_island:
             player_obj.rect.y = island2_obj.position_y_close + (4 * (island2_obj.height / 5))
@@ -311,15 +335,16 @@ while not done:
              map_overview = True
              off_island2 = True
 
-        #code to spawn enemies on island
-        enemies.draw(screen)
-
     #code to check if enemies are dead or not
     if enemy_obj.health <= 0:
          enemy_obj.dead = True
 
     #display player movements to screen
     player_obj.draw(screen)
+
+    #code to check collision between player and enemy
+    if pygame.sprite.collide_rect(player_obj, enemy_obj) and not enemy_obj.dead:
+         player_obj.take_damage()
 
     #draw sword to screen
     if sword_draw:
