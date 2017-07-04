@@ -195,9 +195,10 @@ while not done:
                 player_obj.last_y = 0
                 player_obj.last_x = 1
             if event.key == pygame.K_SPACE:
-                sword_draw = True
-                sword_obj.attack()
-                sword_delay = pygame.time.get_ticks() #amount of milliseconds before sword sprite disappears
+                if (player_obj.change_x == 0 and player_obj.change_y == 0) and (island_overview or island2_overview or dungeon_overview):
+                     sword_draw = True
+                     sword_obj.attack()
+                     sword_delay = pygame.time.get_ticks() #amount of milliseconds before sword sprite disappears
         if event.type == pygame.KEYUP: #if key is released, movement stops
             if event.key == pygame.K_UP or event.key == pygame.K_DOWN or event.key == pygame.K_w or event.key == pygame.K_s:
                 player_obj.change_y = 0
