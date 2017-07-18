@@ -144,6 +144,8 @@ class Sword(pygame.sprite.Sprite):
           self.size = size
           self.facing_x = 0
           self.facing_y = 0
+          self.change_x = 0
+          self.change_y = 4
           self.colour = BLACK
           self.image = pygame.Surface([self.size, self.size])
           self.image.fill(self.colour)
@@ -152,6 +154,9 @@ class Sword(pygame.sprite.Sprite):
           self.rect.y = player_obj.rect.y + player_obj.size
      def draw(self, screen):
           pygame.draw.rect(screen, self.colour, self.rect)
+     def move(self):
+          self.rect.x += self.change_x
+          self.rect.y += self.change_y
      def attack(self):
           #code to put rectangle x value at area where character is facing
           if player_obj.last_x > 0:
@@ -174,8 +179,6 @@ class Sword(pygame.sprite.Sprite):
           for enemy_obj in enemies_hit_list:
               player_obj.enemies_killed += 1
 
-#create sword object
-sword_obj = Sword(15)
 
 #miscellaneous values
 map_overview = True #boolean for when player is in map
@@ -191,6 +194,7 @@ islands.add(island2_obj) #add second island object to list of islands
 enemies = pygame.sprite.Group() #create list of enemies
 enemies.add(enemy_obj) #add enemy to list of enemies
 sword_draw = False #boolean for if sword should be drawn
+swords = pygame.sprite.Group() #create list of swords
 
 #main program loop setup
 done = False
@@ -221,6 +225,8 @@ while not done:
             if event.key == pygame.K_SPACE:
                 if (player_obj.change_x == 0 and player_obj.change_y == 0) and (island_overview or island2_overview or dungeon_overview):
                      sword_draw = True
+                     sword_obj = Sword(15) #create sword object
+                     swords.add(sword_obj) #add sword object to sword group to draw it
                      sword_obj.attack()
                      sword_delay = pygame.time.get_ticks() #amount of milliseconds before sword sprite disappears
         if event.type == pygame.KEYUP: #if key is released, movement stops
@@ -352,12 +358,14 @@ while not done:
     #code to check collision between player and enemy
     if pygame.sprite.collide_rect(player_obj, enemy_obj) and not enemy_obj.dead:
          player_obj.take_damage()
-
+    
     #draw sword to screen
     if sword_draw:
-         sword_obj.draw(screen)
-         if pygame.time.get_ticks() - sword_delay >= 150:
-              sword_draw = False
+        for sword_obj in swords:
+             sword_obj.move()
+        swords.draw(screen)
+        if pygame.time.get_ticks() - sword_delay >= 700:
+             sword_draw = False
     
     #display output and framerate
     pygame.display.flip() #updates screen with what's drawn
