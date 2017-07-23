@@ -49,6 +49,7 @@ class Player(pygame.sprite.Sprite):
          self.last_x = 0 #most recent x direction of player
          self.last_y = -1 #most recent y direction of player
          self.health = 5 #integer for player health
+         self.invulnerable_timer = pygame.time.get_ticks() #create reference timer for invulnerability period
      def move_map(self):
          self.rect.x += self.change_x
          self.rect.y += self.change_y
@@ -117,6 +118,8 @@ class Enemy(pygame.sprite.Sprite):
           self.health = 1 #integer for health value, each hit does damage of 1
           self.dead = False #boolean for if enemy is dead or not
           self.damage = 1 #boolean for damage enemy does to player health
+          self.invulnerable = False #boolean for if enemy can take damage or not
+          self.invulnerable_timer = pygame.time.get_ticks() #sets the current time as reference for invincibility
      def move(self):
           self.rect.clamp_ip(island_rect) #keep enemy on island
           #code to move enemy towards player, facing them
@@ -175,9 +178,11 @@ class Sword(pygame.sprite.Sprite):
               self.rect.y = player_obj.rect.y + (player_obj.size / 2) - (self.size / 2)
               
           #create list of enemies hit by player sword
-          enemies_hit_list = pygame.sprite.spritecollide(self, enemies, True)
+          enemies_hit_list = pygame.sprite.spritecollide(self, enemies, False)
           for enemy_obj in enemies_hit_list:
-              player_obj.enemies_killed += 1
+               if not enemy_obj.invulnerable:
+                   enemy_obj.health -= 1
+                   enemy_obj.invulnerable = True
 
 
 #miscellaneous values
@@ -326,7 +331,8 @@ while not done:
         island2_obj.draw_close(screen)
                 
         #code to spawn enemies on island
-        enemies.draw(screen)
+        for enemy_obj in enemies:
+             enemy_obj.draw(screen)
 
         #have player move (on an island)
         player_obj.move_close()
@@ -349,15 +355,26 @@ while not done:
              off_island2 = True
 
     #code to check if enemies are dead or not
-    if enemy_obj.health <= 0:
-         enemy_obj.dead = True
+    for enemy_obj in enemies:
+        if enemy_obj.health <= 0:
+            enemy_obj.dead = True
 
     #display player movements to screen
     player_obj.draw(screen)
 
+    #code to check if player can be hit
+    if pygame.time.get_ticks() - player_obj.invulnerable_timer >= 1000:
+         player_obj.invulnerable = False
+
+    #code to check if enemy can be hit
+    if pygame.time.get_ticks() - enemy_obj.invulnerable_timer >= 500:
+         enemy_obj.invulnerable = False
+
     #code to check collision between player and enemy
-    if pygame.sprite.collide_rect(player_obj, enemy_obj) and not enemy_obj.dead:
+    if pygame.sprite.collide_rect(player_obj, enemy_obj) and not enemy_obj.dead and not player_obj.invulnerable:
          player_obj.take_damage()
+         player_obj.invulnerable = True
+         player_obj.invulnerable_timer = pygame.time.get_ticks()
     
     #draw sword to screen
     if sword_draw:
