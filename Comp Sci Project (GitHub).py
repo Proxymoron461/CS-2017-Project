@@ -9,7 +9,8 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 RED = (255, 0, 0)
-SEABLUE = (0, 191, 255)
+BROWN = (102, 51, 0)
+SEABLUE = (0, 191, 255) #colour for sea
 GRASSGREEN = (0, 204, 0) #colour for green grassy islands
 SAND = (204, 204, 0) #colour for beach islands
 ROCK = (128, 128, 128) #colour for rock islands
@@ -50,6 +51,7 @@ class Player(pygame.sprite.Sprite):
          self.last_y = -1 #most recent y direction of player
          self.health = 5 #integer for player health
          self.invulnerable_timer = pygame.time.get_ticks() #create reference timer for invulnerability period
+         self.inventory = []
      def move_map(self):
          self.rect.x += self.change_x
          self.rect.y += self.change_y
@@ -63,7 +65,11 @@ class Player(pygame.sprite.Sprite):
          pygame.draw.rect(screen, self.damage_colour, self.rect)
      def take_damage(self):
          self.health -= enemy_obj.damage #take away enemy damage from player health
-
+     def message(self, text, screen):
+         output_text = font.render(text, True, WHITE)
+         pygame.draw.rect(screen, BLACK, [500, 0, 50, 200])
+         screen.blit(output_text, [520, 10])
+                                          
 #initialise player object
 player_obj = Player(250, 250, 20)
 
@@ -104,7 +110,7 @@ island2_obj = Island(300, 300, 200, 300)
 
 #initialise enemy class, intended as parent class for future enemies
 class Enemy(pygame.sprite.Sprite):
-     def __init__(self, size, colour, start_x, start_y):
+     def __init__(self, size, colour, start_x, start_y, health, damage):
           super().__init__()
           self.change_x = 0 #initial x speed
           self.change_y = 0 #initial y speed
@@ -138,7 +144,7 @@ class Enemy(pygame.sprite.Sprite):
                pygame.draw.rect(screen, self.colour, self.rect)
 
 #initialise enemy object
-enemy_obj = Enemy(20, ENEMY_PURPLE, 350, 250)
+enemy_obj = Enemy(20, ENEMY_PURPLE, 350, 250, 1, 1)
 
 #initialise sword class, for attacking
 class Sword(pygame.sprite.Sprite):
@@ -178,12 +184,32 @@ class Sword(pygame.sprite.Sprite):
               self.rect.y = player_obj.rect.y + (player_obj.size / 2) - (self.size / 2)
               
           #create list of enemies hit by player sword
-          enemies_hit_list = pygame.sprite.spritecollide(self, enemies, False)
+          enemies_hit_list = pygame.sprite.spritecollide(self, enemies_island2, False)
           for enemy_obj in enemies_hit_list:
                if not enemy_obj.invulnerable:
                    enemy_obj.health -= 1
                    enemy_obj.invulnerable = True
 
+#initialise treasure chest class
+class Treasure_Chest(pygame.sprite.Sprite):
+     def __init__(self, size, position_x, position_y):
+          super().__init__()
+          self.colour = BROWN
+          self.size = size
+          self.treasure_list = ["treasure_1", "treasure_2"]
+          self.image = pygame.Surface([self.size, self.size])
+          self.image.fill(self.colour)
+          self.rect = self.image.get_rect()
+          self.rect.x = position_x
+          self.rect.y = position_y
+          self.open = False
+     def pick_treasure(self):
+          treasure = random.choice(self.treasure_list)
+          self.treasure_list.remove(treasure)
+          player_obj.message("Congratulations! You have found the ", treasure, "!")
+          player_obj.inventory.append(treasure)
+     def draw(self, screen):
+          pygame.draw.rect(screen, self.colour, self.rect)
 
 #miscellaneous values
 map_overview = True #boolean for when player is in map
@@ -196,10 +222,12 @@ off_island2 = False #boolean for when player gets off second island
 islands = pygame.sprite.Group() #initialise list of islands
 islands.add(island_obj) #add first island object to list of islands
 islands.add(island2_obj) #add second island object to list of islands
-enemies = pygame.sprite.Group() #create list of enemies
-enemies.add(enemy_obj) #add enemy to list of enemies
+enemies_island2 = pygame.sprite.Group() #create list of enemies for island 2
+enemies_island2.add(enemy_obj) #add enemy to list of enemies
 sword_draw = False #boolean for if sword should be drawn
 swords = pygame.sprite.Group() #create list of swords
+font = pygame.font.SysFont('Arial Black', 25, True, False) #created font for use in player messages
+chests_island2 = pygame.sprite.Group() #initiate group of chests to spawn on island 2
 
 #main program loop setup
 done = False
@@ -329,13 +357,22 @@ while not done:
     if island2_overview:
         #draw island
         island2_obj.draw_close(screen)
+
+        #create chest object
+        chest_obj = Treasure_Chest(40, island2_obj.position_x_close + (island2_obj.width / 2) - 20, island2_obj.position_y_close + 40 - 20)
+        chests_island2.add(chest_obj)
                 
         #code to spawn enemies on island
-        for enemy_obj in enemies:
+        for enemy_obj in enemies_island2:
              enemy_obj.draw(screen)
+
+        #code to spawn chest on island
+        for chest_obj in chests_island2:
+             chest_obj.draw(screen)
 
         #have player move (on an island)
         player_obj.move_close()
+        
         #have enemy move
         enemy_obj.move()
         
@@ -355,7 +392,7 @@ while not done:
              off_island2 = True
 
     #code to check if enemies are dead or not
-    for enemy_obj in enemies:
+    for enemy_obj in enemies_island2:
         if enemy_obj.health <= 0:
             enemy_obj.dead = True
 
@@ -375,6 +412,11 @@ while not done:
          player_obj.take_damage()
          player_obj.invulnerable = True
          player_obj.invulnerable_timer = pygame.time.get_ticks()
+
+    #code to check collision between player and chest, output a found treasure message, and add that treasure to player inventory
+    chests_open_list = pygame.sprite.spritecollide(player_obj, chests_island2, False)
+    for chest_obj in chests_open_list:
+         chest_obj.pick_treasure
     
     #draw sword to screen
     if sword_draw:
