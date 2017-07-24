@@ -193,24 +193,20 @@ class Sword(pygame.sprite.Sprite):
 
 #initialise treasure chest class
 class Treasure_Chest(pygame.sprite.Sprite):
-     def __init__(self, size, position_x, position_y):
+     def __init__(self, size, position_x, position_y, treasure):
           super().__init__()
           self.colour = BROWN
           self.size = size
-          self.treasure_list = ["treasure_1", "treasure_2"]
           self.image = pygame.Surface([self.size, self.size])
           self.image.fill(self.colour)
           self.rect = self.image.get_rect()
           self.rect.x = position_x
           self.rect.y = position_y
-          self.open = False
+          self.treasure = treasure
+          self.text = "Congratulations! You found the " + self.treasure + "!"
      def pick_treasure(self):
-          treasure = str(random.choice(self.treasure_list))
-          text = "Congratulations! You found the " + treasure + "!"
-          player_obj.message(text)
-          if not self.open:
-               player_obj.inventory.append(treasure)
-               self.open = True
+          player_obj.message(self.text)
+          player_obj.inventory.append(self.treasure)
      def draw(self, screen):
           pygame.draw.rect(screen, self.colour, self.rect)
 
@@ -230,7 +226,7 @@ enemies_island2.add(enemy_obj) #add enemy to list of enemies
 sword_draw = False #boolean for if sword should be drawn
 swords = pygame.sprite.Group() #create list of swords
 font = pygame.font.SysFont('Arial Black', 18, True, False) #created font for use in player messages
-chests_island2 = pygame.sprite.Group() #initiate group of chests to spawn on island 2
+island_2_chest_open = False #boolean for if the chest on island 2 has been opened
 
 #main program loop setup
 done = False
@@ -258,6 +254,8 @@ while not done:
                 player_obj.change_x = 5
                 player_obj.last_y = 0
                 player_obj.last_x = 1
+            if event.key == pygame.K_j:
+                print(player_obj.inventory)
             if event.key == pygame.K_SPACE:
                 if (player_obj.change_x == 0 and player_obj.change_y == 0) and (island_overview or island2_overview or dungeon_overview):
                      sword_draw = True
@@ -362,16 +360,14 @@ while not done:
         island2_obj.draw_close(screen)
 
         #create chest object
-        chest_obj = Treasure_Chest(40, island2_obj.position_x_close + (island2_obj.width / 2) - 20, island2_obj.position_y_close + 40 - 20)
-        chests_island2.add(chest_obj)
+        island_2_chest = Treasure_Chest(40, island2_obj.position_x_close + (island2_obj.width / 2) - 20, island2_obj.position_y_close + 40 - 20, "Sword of Awesome")
                 
         #code to spawn enemies on island
         for enemy_obj in enemies_island2:
              enemy_obj.draw(screen)
 
         #code to spawn chest on island
-        for chest_obj in chests_island2:
-             chest_obj.draw(screen)
+        island_2_chest.draw(screen)
 
         #have player move (on an island)
         player_obj.move_close()
@@ -394,6 +390,17 @@ while not done:
              map_overview = True
              off_island2 = True
 
+        #code to check collision between player and chest, output a found treasure message, and add that treasure to player inventory
+        if pygame.sprite.collide_rect(player_obj, island_2_chest) and not island_2_chest_open:
+             island_2_chest.pick_treasure()
+             island_2_chest_open = True
+             treasure_message_timer = pygame.time.get_ticks()
+
+        #code to keep treasure message on screen for set amount of time
+        if island_2_chest_open:
+             if pygame.time.get_ticks() - treasure_message_timer <= 2000:
+                  player_obj.message(island_2_chest.text)
+
     #code to check if enemies are dead or not
     for enemy_obj in enemies_island2:
         if enemy_obj.health <= 0:
@@ -415,12 +422,6 @@ while not done:
          player_obj.take_damage()
          player_obj.invulnerable = True
          player_obj.invulnerable_timer = pygame.time.get_ticks()
-
-    #code to check collision between player and chest, output a found treasure message, and add that treasure to player inventory
-    chests_open_list = pygame.sprite.spritecollide(player_obj, chests_island2, False)
-    for chest_obj in chests_open_list:
-         if not chest_obj.open:
-              chest_obj.pick_treasure()
     
     #draw sword to screen
     if sword_draw:
