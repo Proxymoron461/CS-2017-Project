@@ -106,7 +106,7 @@ class Island(pygame.sprite.Sprite):
           return [self.grid_player_x, self.grid_player_y]
 
 #initialise island objects
-island_obj = Island(200, 200, 400, 100)
+island_obj = Island(400, 400, 400, 100)
 island2_obj = Island(300, 300, 200, 300)
 
 #initialise enemy class, intended as parent class for future enemies
@@ -129,8 +129,11 @@ class Enemy(pygame.sprite.Sprite):
           self.invulnerable_timer = pygame.time.get_ticks() #sets the current time as reference for invincibility
           self.move_timer = pygame.time.get_ticks() #sets current time as reference for move calculation
           self.chest_collision = False #boolean for if enemy has collided with a chest
+          self.move_x_plane = False #boolean for change of direction upon collision with obstacle
+          self.move_y_plane = False #boolean for change of direction upon collision with obstacle
      def move(self):
           self.rect.clamp_ip(island_rect) #keep enemy on island
+                    
           #code to move enemy towards player
           if pygame.time.get_ticks() - self.move_timer >= 500:
               if abs(player_obj.rect.x - self.rect.x) < abs(player_obj.rect.y - self.rect.y):
@@ -142,7 +145,7 @@ class Enemy(pygame.sprite.Sprite):
                       self.change_x = 0
                       self.change_y = -1.5
                       self.move_timer = pygame.time.get_ticks()
-              elif abs(player_obj.rect.x - self.rect.x) > abs(player_obj.rect.y - self.rect.y):
+              elif abs(player_obj.rect.x - self.rect.x) > abs(player_obj.rect.y - self.rect.y) or self.move_x_plane:
                   if player_obj.rect.x > self.rect.x:
                       self.change_x = 1.5
                       self.change_y = 0
@@ -151,20 +154,12 @@ class Enemy(pygame.sprite.Sprite):
                       self.change_x = -1.5
                       self.change_y = 0
                       self.move_timer = pygame.time.get_ticks()
-
-          #upon collision with chest, reverse direction
-          if pygame.sprite.spritecollideany(self, chests):
-               self.change_x *= -1
-               self.change_y *= -1
                
           self.rect.x += self.change_x
           self.rect.y += self.change_y
      def draw(self, screen):
           if not self.dead:
                pygame.draw.rect(screen, self.colour, self.rect)
-
-#initialise enemy object
-enemy_obj = Enemy(20, ENEMY_PURPLE, 350, 250, 1, 1)
 
 #initialise sword class, for attacking
 class Sword(pygame.sprite.Sprite):
@@ -237,16 +232,39 @@ islands = pygame.sprite.Group() #initialise list of islands
 islands.add(island_obj) #add first island object to list of islands
 islands.add(island2_obj) #add second island object to list of islands
 enemies = pygame.sprite.Group() #create list of all enemies
-enemies.add(enemy_obj) #add enemy to list of all enemies
 enemies_island2 = pygame.sprite.Group() #create list of enemies for island 2
-enemies_island2.add(enemy_obj) #add enemy to list of enemies for island 2
+enemies_island = pygame.sprite.Group() #create list of enemies for island 1
+enemies_dungeon = pygame.sprite.Group() #create list of enemies for dungeon
 sword_draw = False #boolean for if sword should be drawn
 swords = pygame.sprite.Group() #create list of swords
 font = pygame.font.SysFont('Arial Black', 18, True, False) #created font for use in player messages
+island_chest_open = False #boolean for if the chest on island 1 has been opened
 island_2_chest_open = False #boolean for if the chest on island 2 has been opened
 pause = False #boolean for if the game is paused
 enemy_move_timer = 0 #timer for when enemy can calculate movement
 chests = pygame.sprite.Group() #group for all chests in game
+
+#create chest objects
+island_chest = Treasure_Chest(40, island_obj.position_x_close + (island_obj.width / 2) - 20, island_obj.position_y_close + 40 - 20, "Shield of Litness")
+chests.add(island_chest)
+island_2_chest = Treasure_Chest(40, island2_obj.position_x_close + (island2_obj.width / 2) - 20, island2_obj.position_y_close + 40 - 20, "Sword of Awesome")
+chests.add(island_2_chest)
+
+#create all enemy objects for use on island 1
+for index in range(3):
+     enemy_obj = Enemy(20, ENEMY_PURPLE, 300, 150, 1, 1)
+     enemies_island.add(enemy_obj)
+     enemies.add(enemy_obj)
+     enemy_obj.rect.x += (index * 50)
+     enemy_obj.rect.y += (index * 50)
+         
+#create all enemy objects for use on island 2
+for index in range(3):
+     enemy_obj = Enemy(20, ENEMY_PURPLE, 300, 150, 1, 1)
+     enemies_island2.add(enemy_obj)
+     enemies.add(enemy_obj)
+     enemy_obj.rect.x += (index * 50)
+     enemy_obj.rect.y += (index * 50)
 
 #main program loop setup
 done = False
@@ -306,7 +324,7 @@ while not done:
 
     #screen drawing code, like shapes and text, goes here
     #x and y start from TOP LEFT
-
+    
     #while on map screen
     if map_overview:
          #have player move (map overview) and draw it to screen
@@ -359,11 +377,25 @@ while not done:
 
     #while on first island screen
     if island_overview:
-        #have player move (island overview) within island boundaries
-        player_obj.move_close()
 
         #draw the island up close
         island_obj.draw_close(screen)
+
+        #code to remove enemies from enemies_island list, draw them to screen, and have them move
+        for enemy_obj in enemies_island:
+            if (not pause) and (player_obj.health > 0):
+                 enemy_obj.move()
+            if enemy_obj.dead:
+                 enemies_island.remove(enemy_obj)
+            else:
+                 enemy_obj.draw(screen)
+
+        #code to spawn chest on island
+        if not enemies_island:
+            island_chest.draw(screen)
+
+        #have player move (on an island)
+        player_obj.move_close()
         
         #what happens when player spawns on island
         if on_island:
@@ -380,28 +412,42 @@ while not done:
              map_overview = True
              off_island = True
 
+        #code to check collision between player and chest, output a found treasure message, and add that treasure to player inventory
+        if pygame.sprite.collide_rect(player_obj, island_chest) and not island_chest_open and not enemies_island:
+             island_chest.pick_treasure()
+             island_chest_open = True
+             treasure_message_timer = pygame.time.get_ticks()
+
+        #code to keep treasure message on screen for set amount of time
+        if island_chest_open:
+             if pygame.time.get_ticks() - treasure_message_timer <= 2000:
+                  player_obj.message(island_chest.text)
+
     #while on second island screen
     if island2_overview:
         #draw island
         island2_obj.draw_close(screen)
-
-        #create chest object
-        island_2_chest = Treasure_Chest(40, island2_obj.position_x_close + (island2_obj.width / 2) - 20, island2_obj.position_y_close + 40 - 20, "Sword of Awesome")
-        chests.add(island_2_chest)
                 
         #code to spawn enemies on island
         for enemy_obj in enemies_island2:
-             enemy_obj.draw(screen)
+            enemy_obj.draw(screen)
+
+        #code to remove enemies from enemies_island2 list:
+        for enemy_obj in enemies_island2:
+            if enemy_obj.dead:
+                 enemies_island2.remove(enemy_obj)
 
         #code to spawn chest on island
-        island_2_chest.draw(screen)
+        if not enemies_island2:
+            island_2_chest.draw(screen)
 
         #have player move (on an island)
         player_obj.move_close()
         
         #have enemy move
-        if (not pause) and (player_obj.health > 0):
-             enemy_obj.move()
+        for enemy_obj in enemies_island2:
+            if (not pause) and (player_obj.health > 0):
+                enemy_obj.move()
         
         #what happens when player spawns on island
         if on_island:
@@ -419,7 +465,7 @@ while not done:
              off_island2 = True
 
         #code to check collision between player and chest, output a found treasure message, and add that treasure to player inventory
-        if pygame.sprite.collide_rect(player_obj, island_2_chest) and not island_2_chest_open:
+        if pygame.sprite.collide_rect(player_obj, island_2_chest) and not island_2_chest_open and not enemies_island2:
              island_2_chest.pick_treasure()
              island_2_chest_open = True
              treasure_message_timer = pygame.time.get_ticks()
@@ -442,17 +488,18 @@ while not done:
         player_obj.message("You died! Press ESC to quit.")
 
     #code to check if player can be hit
-    if pygame.time.get_ticks() - player_obj.invulnerable_timer >= 1000:
+    if pygame.time.get_ticks() - player_obj.invulnerable_timer >= 2000:
         player_obj.invulnerable = False
 
     #code to check if enemy can be hit
     for enemy_obj in enemies:
-        if pygame.time.get_ticks() - enemy_obj.invulnerable_timer >= 500:
+        if pygame.time.get_ticks() - enemy_obj.invulnerable_timer >= 1000:
             enemy_obj.invulnerable = False
 
     #code to check collision between player and enemy
-    for enemy_obj in enemies:
-        if pygame.sprite.collide_rect(player_obj, enemy_obj) and not enemy_obj.dead and not player_obj.invulnerable:
+    enemy_damage_list = pygame.sprite.spritecollide(player_obj, enemies, False)
+    for enemy_obj in enemy_damage_list:
+        if (not enemy_obj.dead) and (not player_obj.invulnerable):
             player_obj.take_damage()
             player_obj.invulnerable = True
             player_obj.invulnerable_timer = pygame.time.get_ticks()
