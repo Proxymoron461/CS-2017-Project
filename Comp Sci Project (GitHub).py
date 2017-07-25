@@ -152,10 +152,6 @@ class Sword(pygame.sprite.Sprite):
      def __init__(self, size):
           super().__init__()
           self.size = size
-          self.facing_x = 0
-          self.facing_y = 0
-          self.change_x = 0
-          self.change_y = 4
           self.colour = BLACK
           self.image = pygame.Surface([self.size, self.size])
           self.image.fill(self.colour)
@@ -164,10 +160,6 @@ class Sword(pygame.sprite.Sprite):
           self.rect.y = player_obj.rect.y + player_obj.size
      def draw(self, screen):
           pygame.draw.rect(screen, self.colour, self.rect)
-     def move(self):
-          if not pause:
-              self.rect.x += self.change_x
-              self.rect.y += self.change_y
      def attack(self):
           #code to put rectangle x value at area where character is facing
           if player_obj.last_x > 0:
@@ -191,6 +183,9 @@ class Sword(pygame.sprite.Sprite):
                if not enemy_obj.invulnerable:
                    enemy_obj.health -= 1
                    enemy_obj.invulnerable = True
+
+#create sword object, for use during the game
+sword_obj = Sword(15)
 
 #initialise treasure chest class
 class Treasure_Chest(pygame.sprite.Sprite):
@@ -267,8 +262,6 @@ while not done:
             if event.key == pygame.K_SPACE and not pause:
                 if (player_obj.change_x == 0 and player_obj.change_y == 0) and (island_overview or island2_overview or dungeon_overview):
                      sword_draw = True
-                     sword_obj = Sword(15) #create sword object
-                     swords.add(sword_obj) #add sword object to sword group to draw it
                      sword_obj.attack()
                      sword_delay = pygame.time.get_ticks() #amount of milliseconds before sword sprite disappears
         if event.type == pygame.KEYUP: #if key is released, movement stops
@@ -434,9 +427,10 @@ while not done:
     
     #draw sword to screen
     if sword_draw:
-        for sword_obj in swords:
-            sword_obj.move()
-        swords.draw(screen)
+        if player_obj.change_x == 0 and player_obj.change_y == 0:
+            sword_obj.draw(screen)
+        else:
+            sword_draw = False
         if pygame.time.get_ticks() - sword_delay >= 700:
             sword_draw = False
 
