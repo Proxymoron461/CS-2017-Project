@@ -127,17 +127,36 @@ class Enemy(pygame.sprite.Sprite):
           self.damage = 1 #boolean for damage enemy does to player health
           self.invulnerable = False #boolean for if enemy can take damage or not
           self.invulnerable_timer = pygame.time.get_ticks() #sets the current time as reference for invincibility
+          self.move_timer = pygame.time.get_ticks() #sets current time as reference for move calculation
+          self.chest_collision = False #boolean for if enemy has collided with a chest
      def move(self):
           self.rect.clamp_ip(island_rect) #keep enemy on island
-          #code to move enemy towards player, facing them
-          if player_obj.rect.x > self.rect.x:
-               self.change_x = 1.5
-          elif player_obj.rect.x < self.rect.x:
-               self.change_x = -1.5
-          if player_obj.rect.y > self.rect.y:
-               self.change_y = 1.5
-          elif player_obj.rect.y < self.rect.y:
-               self.change_y = -1.5
+          #code to move enemy towards player
+          if pygame.time.get_ticks() - self.move_timer >= 500:
+              if abs(player_obj.rect.x - self.rect.x) < abs(player_obj.rect.y - self.rect.y):
+                  if player_obj.rect.y > self.rect.y:
+                      self.change_x = 0
+                      self.change_y = 1.5
+                      self.move_timer = pygame.time.get_ticks()
+                  else:
+                      self.change_x = 0
+                      self.change_y = -1.5
+                      self.move_timer = pygame.time.get_ticks()
+              elif abs(player_obj.rect.x - self.rect.x) > abs(player_obj.rect.y - self.rect.y):
+                  if player_obj.rect.x > self.rect.x:
+                      self.change_x = 1.5
+                      self.change_y = 0
+                      self.move_timer = pygame.time.get_ticks()
+                  else:
+                      self.change_x = -1.5
+                      self.change_y = 0
+                      self.move_timer = pygame.time.get_ticks()
+
+          #upon collision with chest, reverse direction
+          if pygame.sprite.spritecollideany(self, chests):
+               self.change_x *= -1
+               self.change_y *= -1
+               
           self.rect.x += self.change_x
           self.rect.y += self.change_y
      def draw(self, screen):
@@ -226,6 +245,8 @@ swords = pygame.sprite.Group() #create list of swords
 font = pygame.font.SysFont('Arial Black', 18, True, False) #created font for use in player messages
 island_2_chest_open = False #boolean for if the chest on island 2 has been opened
 pause = False #boolean for if the game is paused
+enemy_move_timer = 0 #timer for when enemy can calculate movement
+chests = pygame.sprite.Group() #group for all chests in game
 
 #main program loop setup
 done = False
@@ -291,6 +312,7 @@ while not done:
          #have player move (map overview) and draw it to screen
          player_obj.move_map()
 
+         #draw all islands on map
          island_obj.draw_map(screen)
          island2_obj.draw_map(screen)
          
@@ -339,7 +361,8 @@ while not done:
     if island_overview:
         #have player move (island overview) within island boundaries
         player_obj.move_close()
-        
+
+        #draw the island up close
         island_obj.draw_close(screen)
         
         #what happens when player spawns on island
@@ -364,6 +387,7 @@ while not done:
 
         #create chest object
         island_2_chest = Treasure_Chest(40, island2_obj.position_x_close + (island2_obj.width / 2) - 20, island2_obj.position_y_close + 40 - 20, "Sword of Awesome")
+        chests.add(island_2_chest)
                 
         #code to spawn enemies on island
         for enemy_obj in enemies_island2:
@@ -435,7 +459,7 @@ while not done:
     
     #draw sword to screen
     if sword_draw:
-        if player_obj.change_x == 0 and player_obj.change_y == 0:
+        if player_obj.change_x == 0 and player_obj.change_y == 0 and player_obj.health > 0:
             sword_obj.draw(screen)
         else:
             sword_draw = False
