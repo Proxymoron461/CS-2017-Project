@@ -282,7 +282,7 @@ def pause():
      while paused:
         #code for key presses
         for event in pygame.event.get():
-             if event.type == (pygame.QUIT or pygame.K_ESCAPE):
+             if event.type == pygame.QUIT or event.type == pygame.K_ESCAPE:
                   paused = False
                   done = True
              if event.type == pygame.KEYDOWN:
@@ -328,6 +328,7 @@ def island():
           for event in pygame.event.get(): #if the user does something
               if event.type == pygame.QUIT or event.type == pygame.K_ESCAPE: #if the user clicks close or presses escape
                   done = True
+                  island_overview = False
               if event.type == pygame.KEYDOWN: #if key is pressed, movement starts
                   if (event.key == pygame.K_UP or event.key == pygame.K_w):
                       player_obj.change_y = -5
@@ -470,6 +471,7 @@ def island2():
           for event in pygame.event.get(): #if the user does something
               if event.type == pygame.QUIT or event.type == pygame.K_ESCAPE: #if the user clicks close or presses escape
                   done = True
+                  island2_overview = False
               if event.type == pygame.KEYDOWN: #if key is pressed, movement starts
                   if (event.key == pygame.K_UP or event.key == pygame.K_w):
                       player_obj.change_y = -5
@@ -593,10 +595,112 @@ def island2():
           pygame.display.flip()
           clock.tick(60)
 
+#create map function, to be used while on world map
+def world_map():
+     #make variables global so they can be used
+     global map_overview
+     global island_overview
+     global island2_overview
+     global on_island
+     global off_island
+     global off_island2
+     global island_rect
+     
+     #map loop
+     while map_overview:
+          #code for key presses and movement
+          for event in pygame.event.get(): #if the user does something
+              if event.type == pygame.QUIT or event.type == pygame.K_ESCAPE: #if the user clicks close or presses escape
+                  done = True
+                  map_overview = False
+              if event.type == pygame.KEYDOWN: #if key is pressed, movement starts
+                  if (event.key == pygame.K_UP or event.key == pygame.K_w):
+                      player_obj.change_y = -5
+                      player_obj.last_y = -1
+                      player_obj.last_x = 0
+                  if (event.key == pygame.K_DOWN or event.key == pygame.K_s):
+                      player_obj.change_y = 5
+                      player_obj.last_y = 1
+                      player_obj.last_x = 0
+                  if (event.key == pygame.K_LEFT or event.key == pygame.K_a):
+                      player_obj.change_x = -5
+                      player_obj.last_y = 0
+                      player_obj.last_x = -1
+                  if (event.key == pygame.K_RIGHT or event.key == pygame.K_d):
+                      player_obj.change_x = 5
+                      player_obj.last_y = 0
+                      player_obj.last_x = 1
+                  if event.key == pygame.K_j:
+                      print(player_obj.inventory)
+                  if event.key == pygame.K_p:
+                      pause_timer = pygame.time.get_ticks()
+                      pause()
+              if event.type == pygame.KEYUP: #if key is released, movement stops
+                  if event.key == pygame.K_UP or event.key == pygame.K_DOWN or event.key == pygame.K_w or event.key == pygame.K_s:
+                      player_obj.change_y = 0
+                  if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT or event.key == pygame.K_a or event.key == pygame.K_d:
+                      player_obj.change_x = 0
+                    
+          #fill screen with background colour
+          screen.fill(SEABLUE)
+
+          #draw all islands on map
+          island_obj.draw_map(screen)
+          island2_obj.draw_map(screen)
+
+          #have player move (map overview) and draw it to screen
+          player_obj.move_map()
+          player_obj.draw(screen)
+         
+          #what happens when player leaves first island
+          if off_island:
+              player_obj.rect.y = island_obj.rect.y + island_obj.height_map + 5
+              player_obj.rect.x = island_obj.rect.x + (island_obj.width_map / 2) - (player_obj.size / 2)
+              player_obj.change_x = 0
+              player_obj.change_y = 0
+              off_island = False
+              #pygame.time.delay(200)
+
+          #what happens when player leaves second island
+          if off_island2:
+              player_obj.rect.y = island2_obj.rect.y + island2_obj.height_map + 5
+              player_obj.rect.x = island2_obj.rect.x + (island2_obj.width_map / 2) - (player_obj.size / 2)
+              player_obj.change_x = 0
+              player_obj.change_y = 0
+              off_island2 = False
+              #pygame.time.delay(200)
+
+          #if player is in map/sailing screen and they go off the edge, make them reappear on the opposite one
+          if player_obj.rect.x + player_obj.size < 0:
+              player_obj.rect.x = WIDTH + 5
+          elif player_obj.rect.x > WIDTH:
+              player_obj.rect.x = (0 - player_obj.size) - 5
+          if player_obj.rect.y + player_obj.size < 0:
+              player_obj.rect.y = HEIGHT + 5
+          elif player_obj.rect.y > HEIGHT:
+              player_obj.rect.y = (0 - player_obj.size) - 5
+
+          #code for collision detection with islands
+          if pygame.sprite.collide_rect(player_obj, island_obj):
+              map_overview = False
+              island_overview = True
+              on_island = True
+              island_rect = island_obj.boundary_rect
+
+          if pygame.sprite.collide_rect(player_obj, island2_obj):
+              map_overview = False
+              island2_overview = True
+              on_island = True
+              island_rect = island2_obj.boundary_rect
+
+          #display output and framerate
+          pygame.display.flip() #updates screen with what's drawn
+          clock.tick(60) #limits to 60 frames per second
+
 #main program loop
 while not done:
     for event in pygame.event.get(): #if the user does something
-        if event.type == pygame.QUIT or event.type == pygame.K_ESCAPE: #if the user clicks close or presses escape
+        if event.type == (pygame.QUIT or pygame.K_ESCAPE): #if the user clicks close or presses escape
             done = True
         if event.type == pygame.KEYDOWN: #if key is pressed, movement starts
             if (event.key == pygame.K_UP or event.key == pygame.K_w):
@@ -633,8 +737,6 @@ while not done:
                             
     #makes sure the screen is blank, drawing code goes AFTER
     #fill in background depending on where the player is
-    if map_overview:
-         screen.fill(SEABLUE)
     if dungeon_overview:
          screen.fill(ROCK)
 
@@ -643,218 +745,54 @@ while not done:
     
     #while on map screen
     if map_overview:
-         #have player move (map overview) and draw it to screen
-         player_obj.move_map()
-
-         #draw all islands on map
-         island_obj.draw_map(screen)
-         island2_obj.draw_map(screen)
-         
-         #what happens when player leaves first island
-         if off_island:
-              player_obj.rect.y = island_obj.rect.y + island_obj.height_map + 5
-              player_obj.rect.x = island_obj.rect.x + (island_obj.width_map / 2) - (player_obj.size / 2)
-              player_obj.change_x = 0
-              player_obj.change_y = 0
-              off_island = False
-              #pygame.time.delay(200)
-
-         #what happens when player leaves second island
-         if off_island2:
-              player_obj.rect.y = island2_obj.rect.y + island2_obj.height_map + 5
-              player_obj.rect.x = island2_obj.rect.x + (island2_obj.width_map / 2) - (player_obj.size / 2)
-              player_obj.change_x = 0
-              player_obj.change_y = 0
-              off_island2 = False
-              #pygame.time.delay(200)
-
-         #if player is in map/sailing screen and they go off the edge, make them reappear on the opposite one
-         if player_obj.rect.x + player_obj.size < 0:
-              player_obj.rect.x = WIDTH + 5
-         elif player_obj.rect.x > WIDTH:
-              player_obj.rect.x = (0 - player_obj.size) - 5
-         if player_obj.rect.y + player_obj.size < 0:
-              player_obj.rect.y = HEIGHT + 5
-         elif player_obj.rect.y > HEIGHT:
-              player_obj.rect.y = (0 - player_obj.size) - 5
-
-         #code for collision detection with islands
-         if pygame.sprite.collide_rect(player_obj, island_obj):
-              map_overview = False
-              island_overview = True
-              on_island = True
-              island_rect = island_obj.boundary_rect
-
-         if pygame.sprite.collide_rect(player_obj, island2_obj):
-              map_overview = False
-              island2_overview = True
-              on_island = True
-              island_rect = island2_obj.boundary_rect
+        world_map()
 
     if island_overview:
         island()
 
     if island2_overview:
         island2()
-     
-##    #while on first island screen
-##    if island_overview:
-##
-##        #draw the island up close
-##        island_obj.draw_close(screen)
-##
-##        #code to remove enemies from enemies_island list, draw them to screen, and have them move
-##        for enemy_obj in enemies_island:
-##            if (not pause) and (player_obj.health > 0):
-##                 enemy_obj.move()
-##            if enemy_obj.dead:
-##                 enemies_island.remove(enemy_obj)
-##            else:
-##                 enemy_obj.draw(screen)
-##
-##        #code to spawn chest on island
-##        if not enemies_island:
-##            island_chest.draw(screen)
-##
-##        #have player move (on an island)
-##        player_obj.move_close()
-##        
-##        #what happens when player spawns on island
-##        if on_island:
-##            player_obj.rect.y = island_obj.position_y_close + (4 * (island_obj.height / 5))
-##            player_obj.rect.x = island_obj.position_x_close + (island_obj.width / 2) - (player_obj.size / 2)
-##            player_obj.change_x = 0
-##            player_obj.change_y = 0
-##            on_island = False
-##            pygame.time.delay(200)
-##
-##        #make player leave if exit bottom of island
-##        if player_obj.rect.y + player_obj.size >= island_obj.position_y_close + island_obj.height:
-##             island_overview = False
-##             map_overview = True
-##             off_island = True
-##
-##        #code to check collision between player and chest, output a found treasure message, and add that treasure to player inventory
-##        if pygame.sprite.collide_rect(player_obj, island_chest) and not island_chest_open and not enemies_island:
-##             island_chest.pick_treasure()
-##             island_chest_open = True
-##             treasure_message_timer = pygame.time.get_ticks()
-##
-##        #code to keep treasure message on screen for set amount of time
-##        if island_chest_open:
-##             if pygame.time.get_ticks() - treasure_message_timer <= 2000:
-##                  player_obj.message(island_chest.text)
 
-##    #while on second island screen
-##    if island2_overview:
-##        #draw island
-##        island2_obj.draw_close(screen)
-##                
-##        #code to spawn enemies on island
-##        for enemy_obj in enemies_island2:
-##            enemy_obj.draw(screen)
+##    #code to check if enemies are dead or not
+##    for enemy_obj in enemies:
+##        if enemy_obj.health <= 0:
+##            enemy_obj.dead = True
 ##
-##        #code to remove enemies from enemies_island2 list:
-##        for enemy_obj in enemies_island2:
-##            if enemy_obj.dead:
-##                 enemies_island2.remove(enemy_obj)
+##    #display player movements to screen
+##    if player_obj.health > 0:
+##        player_obj.draw(screen)
+##    else:
+##        #display death message upon failure
+##        player_obj.message("You died! Press ESC to quit.")
 ##
-##        #code to spawn chest on island
-##        if not enemies_island2:
-##            island_2_chest.draw(screen)
+##    #code to check if player can be hit
+##    if pygame.time.get_ticks() - player_obj.invulnerable_timer >= 2000:
+##        player_obj.invulnerable = False
 ##
-##        #have player move (on an island)
-##        player_obj.move_close()
-##        
-##        #have enemy move
-##        for enemy_obj in enemies_island2:
-##            if player_obj.health > 0:
-##                enemy_obj.move()
-##        
-##        #what happens when player spawns on island
-##        if on_island:
-##            player_obj.rect.y = island2_obj.position_y_close + (4 * (island2_obj.height / 5))
-##            player_obj.rect.x = island2_obj.position_x_close + (island2_obj.width / 2) - (player_obj.size / 2)
-##            player_obj.change_x = 0
-##            player_obj.change_y = 0
-##            on_island = False
-##            pygame.time.delay(200)
+##    #code to check if enemy can be hit
+##    for enemy_obj in enemies:
+##        if pygame.time.get_ticks() - enemy_obj.invulnerable_timer >= 1000:
+##            enemy_obj.invulnerable = False
 ##
-##        #make player leave if exit bottom of island
-##        if player_obj.rect.y + player_obj.size >= island2_obj.position_y_close + island2_obj.height:
-##             island2_overview = False
-##             map_overview = True
-##             off_island2 = True
-##
-##        #code to check collision between player and chest, output a found treasure message, and add that treasure to player inventory
-##        if pygame.sprite.collide_rect(player_obj, island_2_chest) and not island_2_chest_open and not enemies_island2:
-##             island_2_chest.pick_treasure()
-##             island_2_chest_open = True
-##             treasure_message_timer = pygame.time.get_ticks()
-##
-##        #code to keep treasure message on screen for set amount of time
-##        if island_2_chest_open:
-##             if pygame.time.get_ticks() - treasure_message_timer <= 2000:
-##                  player_obj.message(island_2_chest.text)
-
-    #code to check if enemies are dead or not
-    for enemy_obj in enemies:
-        if enemy_obj.health <= 0:
-            enemy_obj.dead = True
-
-    #display player movements to screen
-    if player_obj.health > 0:
-        player_obj.draw(screen)
-    else:
-        #display death message upon failure
-        player_obj.message("You died! Press ESC to quit.")
-
-    #code to check if player can be hit
-    if pygame.time.get_ticks() - player_obj.invulnerable_timer >= 2000:
-        player_obj.invulnerable = False
-
-    #code to check if enemy can be hit
-    for enemy_obj in enemies:
-        if pygame.time.get_ticks() - enemy_obj.invulnerable_timer >= 1000:
-            enemy_obj.invulnerable = False
-
-    #code to check collision between player and enemy
-    enemy_damage_list = pygame.sprite.spritecollide(player_obj, enemies, False)
-    for enemy_obj in enemy_damage_list:
-        if (not enemy_obj.dead) and (not player_obj.invulnerable):
-            player_obj.take_damage()
-            player_obj.invulnerable = True
-            player_obj.invulnerable_timer = pygame.time.get_ticks()
-    
-    #draw sword to screen
-    if sword_draw:
-        if player_obj.change_x == 0 and player_obj.change_y == 0 and player_obj.health > 0:
-            sword_obj.draw(screen)
-        else:
-            sword_draw = False
-        if pygame.time.get_ticks() - sword_delay >= 700:
-            sword_draw = False
-
-##    #clear screen and ignore if paused
-##    if pause:
-##        screen.fill(BLACK)
-##        text = font.render("Game paused. Press P to continue.", True, WHITE)
-##        screen.blit(text, [20, 10])
-##        if sword_draw:
-##            sword_delay += (pygame.time.get_ticks() - pause_timer)
-##        player_obj.invulnerable_timer += (pygame.time.get_ticks() - pause_timer)
-##        for enemy_obj in enemies:
-##            enemy_obj.invulnerable_timer += (pygame.time.get_ticks() - pause_timer)
-##        if island_2_chest_open:
-##            treasure_message_timer += (pygame.time.get_ticks() - pause_timer)
-##        pause_timer = pygame.time.get_ticks()
+##    #code to check collision between player and enemy
+##    enemy_damage_list = pygame.sprite.spritecollide(player_obj, enemies, False)
+##    for enemy_obj in enemy_damage_list:
+##        if (not enemy_obj.dead) and (not player_obj.invulnerable):
+##            player_obj.take_damage()
+##            player_obj.invulnerable = True
+##            player_obj.invulnerable_timer = pygame.time.get_ticks()
+##    
+##    #draw sword to screen
+##    if sword_draw:
+##        if player_obj.change_x == 0 and player_obj.change_y == 0 and player_obj.health > 0:
+##            sword_obj.draw(screen)
+##        else:
+##            sword_draw = False
+##        if pygame.time.get_ticks() - sword_delay >= 700:
+##            sword_draw = False
     
     #display output and framerate
     pygame.display.flip() #updates screen with what's drawn
-##    if island_overview:
-##         pygame.display.update(island_obj.rect) #if player on an island, the screen will only update what is on the island to save memory
-##    if island2_overview:
-##         pygame.display.update(island2_obj.rect)
     clock.tick(60) #limits to 60 frames per second
 
 #closes window, exits game
