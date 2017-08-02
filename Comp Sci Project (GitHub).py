@@ -167,13 +167,15 @@ class Sword(pygame.sprite.Sprite):
           super().__init__()
           self.size = size
           self.colour = BLACK
-          self.image = pygame.Surface([self.size, self.size])
-          self.image.fill(self.colour)
+          #self.image = pygame.Surface([self.size, self.size])
+          #self.image.fill(self.colour)
+          self.image = pygame.image.load("Sword.png").convert()
+          self.image.set_colorkey(BLACK)
           self.rect = self.image.get_rect()
           self.rect.x = player_obj.rect.x + player_obj.size
           self.rect.y = player_obj.rect.y + player_obj.size
      def draw(self, screen):
-          pygame.draw.rect(screen, self.colour, self.rect)
+          screen.blit(self.image, [self.rect.x, self.rect.y])
      def attack(self):
           #code to put rectangle x value at area where character is facing
           if player_obj.last_x > 0:
@@ -207,8 +209,10 @@ class Treasure_Chest(pygame.sprite.Sprite):
           super().__init__()
           self.colour = BROWN
           self.size = size
-          self.image = pygame.Surface([self.size, self.size])
-          self.image.fill(self.colour)
+          #self.image = pygame.Surface([self.size, self.size])
+          #self.image.fill(self.colour)
+          self.image = pygame.image.load("Chest.png").convert()
+          self.image.set_colorkey(BLACK)
           self.rect = self.image.get_rect()
           self.rect.x = position_x
           self.rect.y = position_y
@@ -218,7 +222,7 @@ class Treasure_Chest(pygame.sprite.Sprite):
           player_obj.message(self.text)
           player_obj.inventory.append(self.treasure)
      def draw(self, screen):
-          pygame.draw.rect(screen, self.colour, self.rect)
+          screen.blit(self.image, [self.rect.x, self.rect.y])
 
 #miscellaneous values
 map_overview = True #boolean for when player is in map
@@ -381,7 +385,7 @@ def island():
           if not enemies_island:
               island_chest.draw(screen)
 
-          #have player move (on an island)
+          #have player move (on island)
           player_obj.move_close()
         
           #what happens when player spawns on island
@@ -734,16 +738,8 @@ while not done:
                 player_obj.change_y = 0
             if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT or event.key == pygame.K_a or event.key == pygame.K_d:
                 player_obj.change_x = 0
-                            
-    #makes sure the screen is blank, drawing code goes AFTER
-    #fill in background depending on where the player is
-    if dungeon_overview:
-         screen.fill(ROCK)
 
-    #screen drawing code, like shapes and text, goes here
-    #x and y start from TOP LEFT
-    
-    #while on map screen
+    #functions for different areas                            
     if map_overview:
         world_map()
 
@@ -753,43 +749,7 @@ while not done:
     if island2_overview:
         island2()
 
-##    #code to check if enemies are dead or not
-##    for enemy_obj in enemies:
-##        if enemy_obj.health <= 0:
-##            enemy_obj.dead = True
-##
-##    #display player movements to screen
-##    if player_obj.health > 0:
-##        player_obj.draw(screen)
-##    else:
-##        #display death message upon failure
-##        player_obj.message("You died! Press ESC to quit.")
-##
-##    #code to check if player can be hit
-##    if pygame.time.get_ticks() - player_obj.invulnerable_timer >= 2000:
-##        player_obj.invulnerable = False
-##
-##    #code to check if enemy can be hit
-##    for enemy_obj in enemies:
-##        if pygame.time.get_ticks() - enemy_obj.invulnerable_timer >= 1000:
-##            enemy_obj.invulnerable = False
-##
-##    #code to check collision between player and enemy
-##    enemy_damage_list = pygame.sprite.spritecollide(player_obj, enemies, False)
-##    for enemy_obj in enemy_damage_list:
-##        if (not enemy_obj.dead) and (not player_obj.invulnerable):
-##            player_obj.take_damage()
-##            player_obj.invulnerable = True
-##            player_obj.invulnerable_timer = pygame.time.get_ticks()
-##    
-##    #draw sword to screen
-##    if sword_draw:
-##        if player_obj.change_x == 0 and player_obj.change_y == 0 and player_obj.health > 0:
-##            sword_obj.draw(screen)
-##        else:
-##            sword_draw = False
-##        if pygame.time.get_ticks() - sword_delay >= 700:
-##            sword_draw = False
+
     
     #display output and framerate
     pygame.display.flip() #updates screen with what's drawn
