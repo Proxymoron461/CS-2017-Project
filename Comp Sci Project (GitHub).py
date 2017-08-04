@@ -223,7 +223,7 @@ class Treasure_Chest(pygame.sprite.Sprite):
           #self.image = pygame.Surface([self.size, self.size])
           #self.image.fill(self.colour)
           self.image = pygame.image.load("Chest.png").convert()
-          self.image.set_colorkey(BLACK)
+          self.image.set_colorkey(WHITE)
           self.rect = self.image.get_rect()
           self.rect.x = position_x
           self.rect.y = position_y
