@@ -50,6 +50,7 @@ class Player(pygame.sprite.Sprite):
          self.last_x = 0 #most recent x direction of player
          self.last_y = -1 #most recent y direction of player
          self.health = 30 #integer for player health
+         self.max_health = 30 #integer for maximum player health (when healing, etc, want to be able to return player health to max efficiently)
          self.invulnerable = False #boolean for if player is invulnerable or not
          self.invulnerable_timer = pygame.time.get_ticks() #create reference timer for invulnerability period
          self.inventory = []
@@ -174,25 +175,35 @@ class Sword(pygame.sprite.Sprite):
           self.rect = self.image.get_rect()
           self.rect.x = player_obj.rect.x + player_obj.size
           self.rect.y = player_obj.rect.y + player_obj.size
+          #create variables for sword image/sprite at different directions
+          self.image_up = self.image
+          self.image_down = pygame.transform.flip(self.image, False, True)
+          self.image_left = pygame.transform.rotate(self.image, 90)
+          self.image_right = pygame.transform.flip(self.image_left, True, False)
+          self.curr_image = self.image_up
      def draw(self, screen):
-          screen.blit(self.image, [self.rect.x, self.rect.y])
+          screen.blit(self.curr_image, [self.rect.x, self.rect.y])
      def attack(self):
           #code to put rectangle x value at area where character is facing
           if player_obj.last_x > 0:
               self.rect.x = player_obj.rect.x + player_obj.size
+              self.curr_image = self.image_right
           elif player_obj.last_x < 0:
               self.rect.x = player_obj.rect.x - self.size
+              self.curr_image = self.image_left
           elif player_obj.last_x == 0:
               self.rect.x = player_obj.rect.x + (player_obj.size / 2) - (self.size / 2)
 
           #code to put rectangle y value at area where character is facing     
           if player_obj.last_y > 0:
               self.rect.y = player_obj.rect.y + player_obj.size
+              self.curr_image = self.image_down
           elif player_obj.last_y < 0:
               self.rect.y = player_obj.rect.y - self.size
+              self.curr_image = self.image_up
           elif player_obj.last_y == 0:
               self.rect.y = player_obj.rect.y + (player_obj.size / 2) - (self.size / 2)
-              
+     def attack_collision(self):
           #create list of enemies hit by player sword
           enemies_hit_list = pygame.sprite.spritecollide(self, enemies, False)
           for enemy_obj in enemies_hit_list:
@@ -281,6 +292,7 @@ def pause():
      global treasure_message_timer
      global pause_timer
      global done
+     global sword_delay
 
      #pause loop
      while paused:
@@ -299,7 +311,6 @@ def pause():
         screen.blit(text, [20, 10])
         
         #code to keep timers ticking over
-        global treasure_message_timer #make variable global so it can be changed
         if sword_draw:
             sword_delay += (pygame.time.get_ticks() - pause_timer)
         player_obj.invulnerable_timer += (pygame.time.get_ticks() - pause_timer)
@@ -326,6 +337,7 @@ def island():
      global island_chest_open
      global off_island
      global sword_draw
+     global sword_delay
      
      while island_overview:
           #code for key presses + movement
@@ -359,6 +371,7 @@ def island():
                       if (player_obj.change_x == 0 and player_obj.change_y == 0):
                            sword_draw = True
                            sword_obj.attack()
+                           sword_obj.attack_collision()
                            sword_delay = pygame.time.get_ticks() #amount of milliseconds before sword sprite disappears
               if event.type == pygame.KEYUP: #if key is released, movement stops
                   if event.key == pygame.K_UP or event.key == pygame.K_DOWN or event.key == pygame.K_w or event.key == pygame.K_s:
@@ -447,6 +460,7 @@ def island():
           if sword_draw:
               if player_obj.change_x == 0 and player_obj.change_y == 0 and player_obj.health > 0:
                   sword_obj.draw(screen)
+                  sword_obj.attack_collision()
               else:
                   sword_draw = False
               if pygame.time.get_ticks() - sword_delay >= 700:
@@ -469,6 +483,7 @@ def island2():
      global island_2_chest_open
      global off_island2
      global sword_draw
+     global sword_delay
      
      while island2_overview:
           #code for key presses + movement
@@ -502,6 +517,7 @@ def island2():
                       if (player_obj.change_x == 0 and player_obj.change_y == 0):
                            sword_draw = True
                            sword_obj.attack()
+                           sword_obj.attack_collision()
                            sword_delay = pygame.time.get_ticks() #amount of milliseconds before sword sprite disappears
               if event.type == pygame.KEYUP: #if key is released, movement stops
                   if event.key == pygame.K_UP or event.key == pygame.K_DOWN or event.key == pygame.K_w or event.key == pygame.K_s:
@@ -590,6 +606,7 @@ def island2():
           if sword_draw:
               if player_obj.change_x == 0 and player_obj.change_y == 0 and player_obj.health > 0:
                   sword_obj.draw(screen)
+                  sword_obj.attack_collision()
               else:
                   sword_draw = False
               if pygame.time.get_ticks() - sword_delay >= 700:
@@ -732,6 +749,7 @@ while not done:
                 if (player_obj.change_x == 0 and player_obj.change_y == 0):
                      sword_draw = True
                      sword_obj.attack()
+                     sword_obj.attack_collision()
                      sword_delay = pygame.time.get_ticks() #amount of milliseconds before sword sprite disappears
         if event.type == pygame.KEYUP: #if key is released, movement stops
             if event.key == pygame.K_UP or event.key == pygame.K_DOWN or event.key == pygame.K_w or event.key == pygame.K_s:
