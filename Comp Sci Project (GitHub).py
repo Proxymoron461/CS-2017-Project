@@ -141,13 +141,19 @@ class Enemy(pygame.sprite.Sprite):
 ##          else:
 ##               self.aggressive = False
 
-##          #code to stop enemies merging
-##          enemy_collision_sprite_list = pygame.sprite.spritecollide(self, enemies, False)
-##          for enemy_sprite in enemy_collision_sprite_list:
-##               self.change_x *= -1
-##               self.change_y *= -1
-##               enemy_sprite.change_x *= -1
-##               enemy_sprite.change_y *= -1
+          #code to stop enemies merging
+          enemies.remove(self)
+          for enemy_sprite in curr_enemy_list:
+               if pygame.sprite.collide_circle(self, enemy_sprite):
+                    if self.change_x == 0:
+                         self.change_y *= -1
+                    else:
+                         self.change_x *= -1
+##                    if enemy_sprite.change_x == 0:
+##                         enemy_sprite.change_y *= -1
+##                    else:
+##                         enemy_sprite.change_x *= -1
+          enemies.add(self)
                     
           #code to move enemy towards player aggressively
           if self.aggressive:
@@ -290,6 +296,7 @@ island_2_chest_open = False #boolean for if the chest on island 2 has been opene
 paused = False #boolean for if the game is paused
 enemy_move_timer = 0 #timer for when enemy can calculate movement
 chests = pygame.sprite.Group() #group for all chests in game
+curr_enemy_list = enemies #current list for enemy collision
 
 #create chest objects
 island_chest = Treasure_Chest(40, island_obj.position_x_close + (island_obj.width / 2) - 20, island_obj.position_y_close + 40 - 20, "Shield of Litness")
@@ -370,6 +377,7 @@ def island():
      global off_island
      global sword_draw
      global sword_delay
+     global curr_enemy_list
      
      while island_overview:
           #code for key presses + movement
@@ -516,6 +524,7 @@ def island2():
      global off_island2
      global sword_draw
      global sword_delay
+     global curr_enemy_list
      
      while island2_overview:
           #code for key presses + movement
@@ -658,6 +667,7 @@ def world_map():
      global off_island
      global off_island2
      global island_rect
+     global curr_enemy_list
      
      #map loop
      while map_overview:
@@ -738,12 +748,14 @@ def world_map():
               island_overview = True
               on_island = True
               island_rect = island_obj.boundary_rect
+              curr_enemy_list = enemies_island
 
           if pygame.sprite.collide_rect(player_obj, island2_obj):
               map_overview = False
               island2_overview = True
               on_island = True
               island_rect = island2_obj.boundary_rect
+              curr_enemy_list = enemies_island2
 
           #display output and framerate
           pygame.display.flip() #updates screen with what's drawn
