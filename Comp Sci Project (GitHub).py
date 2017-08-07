@@ -131,7 +131,46 @@ class Enemy(pygame.sprite.Sprite):
           self.invulnerable_timer = pygame.time.get_ticks() #sets the current time as reference for invincibility
           self.move_timer = pygame.time.get_ticks() #sets current time as reference for move calculation
           self.chest_collision = False #boolean for if enemy has collided with a chest
-          self.aggressive = True #boolean for if enemy should be attacking or not
+          #self.aggressive = True #boolean for if enemy should be attacking or not
+          self.move_rect = (self.size, 45, self.rect.x + self.size, self.rect.y + self.size) #set rectangle for checking movement path, with the distance travelled during the 500 millisecond interval (1.5 * 30)
+     def check_movement(self):
+##          #code to stop enemies merging
+##          curr_enemy_list.remove(self)
+##          for enemy_sprite in curr_enemy_list:
+##               if pygame.sprite.collide_circle(self, enemy_sprite):
+##                    if self.change_x == 0:
+##                         self.change_y *= -1
+##                    else:
+##                         self.change_x *= -1
+##                    if enemy_sprite.change_x == 0:
+##                         enemy_sprite.change_y *= -1
+##                    else:
+##                         enemy_sprite.change_x *= -1
+##          curr_enemy_list.add(self)
+            
+          #code to stop enemies merging
+          
+     def move_attack(self):
+          #code to move enemy towards player aggressively
+          if pygame.time.get_ticks() - self.move_timer >= 500:
+               if abs(player_obj.rect.x - self.rect.x) < abs(player_obj.rect.y - self.rect.y):
+                   if player_obj.rect.y > self.rect.y:
+                        self.change_x = 0
+                        self.change_y = 1.5
+                        self.move_timer = pygame.time.get_ticks()
+                   else:
+                        self.change_x = 0
+                        self.change_y = -1.5
+                        self.move_timer = pygame.time.get_ticks()
+               elif abs(player_obj.rect.x - self.rect.x) > abs(player_obj.rect.y - self.rect.y):
+                   if player_obj.rect.x > self.rect.x:
+                        self.change_x = 1.5
+                        self.change_y = 0
+                        self.move_timer = pygame.time.get_ticks()
+                   else:
+                        self.change_x = -1.5
+                        self.change_y = 0
+                        self.move_timer = pygame.time.get_ticks()
      def move(self):
           self.rect.clamp_ip(island_rect) #keep enemy on island
 
@@ -140,57 +179,13 @@ class Enemy(pygame.sprite.Sprite):
 ##               self.aggressive = True
 ##          else:
 ##               self.aggressive = False
-
-          #code to stop enemies merging
-          enemies.remove(self)
-          for enemy_sprite in curr_enemy_list:
-               if pygame.sprite.collide_circle(self, enemy_sprite):
-                    if self.change_x == 0:
-                         self.change_y *= -1
-                    else:
-                         self.change_x *= -1
-##                    if enemy_sprite.change_x == 0:
-##                         enemy_sprite.change_y *= -1
-##                    else:
-##                         enemy_sprite.change_x *= -1
-          enemies.add(self)
+##
                     
-          #code to move enemy towards player aggressively
-          if self.aggressive:
-               if pygame.time.get_ticks() - self.move_timer >= 500:
-                   if abs(player_obj.rect.x - self.rect.x) < abs(player_obj.rect.y - self.rect.y):
-                       if player_obj.rect.y > self.rect.y:
-                           self.change_x = 0
-                           self.change_y = 1.5
-                           self.move_timer = pygame.time.get_ticks()
-                       else:
-                           self.change_x = 0
-                           self.change_y = -1.5
-                           self.move_timer = pygame.time.get_ticks()
-                   elif abs(player_obj.rect.x - self.rect.x) > abs(player_obj.rect.y - self.rect.y):
-                       if player_obj.rect.x > self.rect.x:
-                           self.change_x = 1.5
-                           self.change_y = 0
-                           self.move_timer = pygame.time.get_ticks()
-                       else:
-                           self.change_x = -1.5
-                           self.change_y = 0
-                           self.move_timer = pygame.time.get_ticks()
-##          #code to move enemies peacefully
-##          else:
-##               if pygame.time.get_ticks() - self.move_timer >= 500:
-##                    if self.change_x > WIDTH / 2:
-##                         self.change_x = -0.5
-##                    elif self.change_x < WIDTH / 2:
-##                         self.change_x = 0.5
-##                    elif self.change_x < (WIDTH / 2) + 5 and self.change_x > (WIDTH / 2) - 5:
-##                         self.change_x == 0
-##                    if self.change_x == 0:
-##                         if self.change_y > HEIGHT / 2:
-##                              self.change_y = -0.5
-##                         else:
-##                              self.change_y = 0.5
-##                    self.move_timer = pygame.time.get_ticks()
+          #attack movement
+          self.move_attack()
+
+          #check movement
+          self.check_movement()
 
           #apply position changes           
           self.rect.x += self.change_x
