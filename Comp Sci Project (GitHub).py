@@ -107,8 +107,9 @@ class Island(pygame.sprite.Sprite):
           return [self.grid_player_x, self.grid_player_y]
 
 #initialise island objects
-island_obj = Island(400, 400, 400, 100)
+island_obj = Island(400, 400, 450, 150)
 island2_obj = Island(300, 300, 200, 300)
+centre_island_obj = Island(400, 400, ((WIDTH / 2) - 50), ((HEIGHT / 2) - 50))
 
 #initialise enemy class, intended as parent class for future enemies
 class Enemy(pygame.sprite.Sprite):
@@ -130,32 +131,62 @@ class Enemy(pygame.sprite.Sprite):
           self.invulnerable_timer = pygame.time.get_ticks() #sets the current time as reference for invincibility
           self.move_timer = pygame.time.get_ticks() #sets current time as reference for move calculation
           self.chest_collision = False #boolean for if enemy has collided with a chest
-          self.move_x_plane = False #boolean for change of direction upon collision with obstacle
-          self.move_y_plane = False #boolean for change of direction upon collision with obstacle
+          self.aggressive = True #boolean for if enemy should be attacking or not
      def move(self):
           self.rect.clamp_ip(island_rect) #keep enemy on island
+
+##          #code to check how close player is to enemy
+##          if abs(player_obj.rect.x - self.rect.x) <= 50 or abs(player_obj.rect.y - self.rect.y) <= 50:
+##               self.aggressive = True
+##          else:
+##               self.aggressive = False
+
+##          #code to stop enemies merging
+##          enemy_collision_sprite_list = pygame.sprite.spritecollide(self, enemies, False)
+##          for enemy_sprite in enemy_collision_sprite_list:
+##               self.change_x *= -1
+##               self.change_y *= -1
+##               enemy_sprite.change_x *= -1
+##               enemy_sprite.change_y *= -1
                     
-          #code to move enemy towards player
-          if pygame.time.get_ticks() - self.move_timer >= 500:
-              if abs(player_obj.rect.x - self.rect.x) < abs(player_obj.rect.y - self.rect.y):
-                  if player_obj.rect.y > self.rect.y:
-                      self.change_x = 0
-                      self.change_y = 1.5
-                      self.move_timer = pygame.time.get_ticks()
-                  else:
-                      self.change_x = 0
-                      self.change_y = -1.5
-                      self.move_timer = pygame.time.get_ticks()
-              elif abs(player_obj.rect.x - self.rect.x) > abs(player_obj.rect.y - self.rect.y) or self.move_x_plane:
-                  if player_obj.rect.x > self.rect.x:
-                      self.change_x = 1.5
-                      self.change_y = 0
-                      self.move_timer = pygame.time.get_ticks()
-                  else:
-                      self.change_x = -1.5
-                      self.change_y = 0
-                      self.move_timer = pygame.time.get_ticks()
-               
+          #code to move enemy towards player aggressively
+          if self.aggressive:
+               if pygame.time.get_ticks() - self.move_timer >= 500:
+                   if abs(player_obj.rect.x - self.rect.x) < abs(player_obj.rect.y - self.rect.y):
+                       if player_obj.rect.y > self.rect.y:
+                           self.change_x = 0
+                           self.change_y = 1.5
+                           self.move_timer = pygame.time.get_ticks()
+                       else:
+                           self.change_x = 0
+                           self.change_y = -1.5
+                           self.move_timer = pygame.time.get_ticks()
+                   elif abs(player_obj.rect.x - self.rect.x) > abs(player_obj.rect.y - self.rect.y):
+                       if player_obj.rect.x > self.rect.x:
+                           self.change_x = 1.5
+                           self.change_y = 0
+                           self.move_timer = pygame.time.get_ticks()
+                       else:
+                           self.change_x = -1.5
+                           self.change_y = 0
+                           self.move_timer = pygame.time.get_ticks()
+##          #code to move enemies peacefully
+##          else:
+##               if pygame.time.get_ticks() - self.move_timer >= 500:
+##                    if self.change_x > WIDTH / 2:
+##                         self.change_x = -0.5
+##                    elif self.change_x < WIDTH / 2:
+##                         self.change_x = 0.5
+##                    elif self.change_x < (WIDTH / 2) + 5 and self.change_x > (WIDTH / 2) - 5:
+##                         self.change_x == 0
+##                    if self.change_x == 0:
+##                         if self.change_y > HEIGHT / 2:
+##                              self.change_y = -0.5
+##                         else:
+##                              self.change_y = 0.5
+##                    self.move_timer = pygame.time.get_ticks()
+
+          #apply position changes           
           self.rect.x += self.change_x
           self.rect.y += self.change_y
      def draw(self, screen):
@@ -246,6 +277,7 @@ off_island2 = False #boolean for when player gets off second island
 islands = pygame.sprite.Group() #initialise list of islands
 islands.add(island_obj) #add first island object to list of islands
 islands.add(island2_obj) #add second island object to list of islands
+islands.add(centre_island_obj) # add central island to list of islands
 enemies = pygame.sprite.Group() #create list of all enemies
 enemies_island2 = pygame.sprite.Group() #create list of enemies for island 2
 enemies_island = pygame.sprite.Group() #create list of enemies for island 1
@@ -388,7 +420,7 @@ def island():
           #code to remove enemies from enemies_island list, draw them to screen, and have them move
           for enemy_obj in enemies_island:
               if enemy_obj.dead:
-                   enemies_island.remove(enemy_obj)
+                   enemy_obj.kill()
               else:
                    enemy_obj.draw(screen)
               if player_obj.health > 0:
@@ -534,7 +566,7 @@ def island2():
           #code to remove enemies from enemies_island list, draw them to screen, and have them move
           for enemy_obj in enemies_island2:
               if enemy_obj.dead:
-                   enemies_island2.remove(enemy_obj)
+                   enemy_obj.kill()
               else:
                    enemy_obj.draw(screen)
               if player_obj.health > 0:
@@ -668,6 +700,7 @@ def world_map():
           #draw all islands on map
           island_obj.draw_map(screen)
           island2_obj.draw_map(screen)
+          centre_island_obj.draw_map(screen)
 
           #have player move (map overview) and draw it to screen
           player_obj.move_map()
@@ -680,7 +713,6 @@ def world_map():
               player_obj.change_x = 0
               player_obj.change_y = 0
               off_island = False
-              #pygame.time.delay(200)
 
           #what happens when player leaves second island
           if off_island2:
@@ -689,7 +721,6 @@ def world_map():
               player_obj.change_x = 0
               player_obj.change_y = 0
               off_island2 = False
-              #pygame.time.delay(200)
 
           #if player is in map/sailing screen and they go off the edge, make them reappear on the opposite one
           if player_obj.rect.x + player_obj.size < 0:
