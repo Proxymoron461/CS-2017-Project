@@ -107,6 +107,7 @@ class Island(pygame.sprite.Sprite):
         self.grid = [[0 for x in range(width // 10)] for y in range(height // 10)]
         self.grid_margin = 10
         self.overview = False
+        self.off = False
 
     def draw_close(self, screen):  # drawing code for when player is on island
         pygame.draw.rect(screen, self.colour, self.rect_close)
@@ -297,8 +298,6 @@ class Treasure_Chest(pygame.sprite.Sprite):
 # miscellaneous values
 map_overview = True  # boolean for when player is in map
 on_island = False  # boolean for when player gets onto island
-off_island = False  # boolean for when player gets off first island
-off_island2 = False  # boolean for when player gets off second island
 islands = pygame.sprite.Group()  # initialise list of islands
 islands.add(island_obj)  # add first island object to list of islands
 islands.add(island2_obj)  # add second island object to list of islands
@@ -370,14 +369,11 @@ def draw_sword():
 
 # function to determine what happens if island is left
 def leave_island(island):
-    global off_island
-    global off_island2
     player_obj.rect.y = island.rect.y + island.height_map + 5
     player_obj.rect.x = island.rect.x + (island.width_map / 2) - (player_obj.size / 2)
     player_obj.change_x = 0
     player_obj.change_y = 0
-    off_island = False
-    off_island2 = False
+    island.off = False
 
 # function to determine whether enemies are dead or not
 def enemy_health_check():
@@ -406,12 +402,33 @@ def land_on_island(curr_island):
     player_obj.change_y = 0
     on_island = False
 
+# function to deal with attacking
+def sword_attack():
+    # make variables global
+    global sword_delay
+    global sword_draw
+    # code for attacking and bringing player to halt
+    player_obj.change_x = 0
+    player_obj.change_y = 0
+    sword_draw = True
+    sword_obj.attack()
+    sword_obj.attack_collision()
+    sword_delay = pygame.time.get_ticks()  # amount of milliseconds before sword sprite disappears
+
+# function to determine what happens when island is left
+def check_leave_island(curr_island):
+    # make variables global
+    global map_overview
+    # code to check if island is being left
+    if player_obj.rect.y + player_obj.size >= curr_island.position_y_close + curr_island.height:
+        curr_island.overview = False
+        map_overview = True
+        curr_island.off = True
+
 # function to take care of key presses while in locations like islands on dungeons
 def location_movement(curr_location):
     # make variables global
     global done
-    # global island_overview
-    # global island2_overview
     global pause_timer
     global sword_draw
     global sword_delay
@@ -441,11 +458,7 @@ def location_movement(curr_location):
                 pause_timer = pygame.time.get_ticks()
                 pause()
             if event.key == pygame.K_SPACE:
-                if player_obj.change_x == 0 and player_obj.change_y == 0:
-                    sword_draw = True
-                    sword_obj.attack()
-                    sword_obj.attack_collision()
-                    sword_delay = pygame.time.get_ticks()  # amount of milliseconds before sword sprite disappears
+                sword_attack()
         if event.type == pygame.KEYUP:  # if key is released, movement stops
             if event.key == pygame.K_UP or event.key == pygame.K_DOWN or event.key == pygame.K_w or event.key == pygame.K_s:
                 player_obj.change_y = 0
@@ -558,7 +571,6 @@ def island():
     global map_overview
     global island_rect
     global island_chest_open
-    global off_island
     global sword_draw
     global sword_delay
     global curr_enemy_list
@@ -588,10 +600,7 @@ def island():
             land_on_island(island_obj)
 
         # make player leave if exit bottom of island
-        if player_obj.rect.y + player_obj.size >= island_obj.position_y_close + island_obj.height:
-            island_obj.overview = False
-            map_overview = True
-            off_island = True
+        check_leave_island(island_obj)
 
         # code to check collision between player and chest, output a found treasure message, and add that treasure to player inventory
         if pygame.sprite.collide_rect(player_obj, island_chest) and not island_chest_open and not enemies_island:
@@ -648,7 +657,6 @@ def island2():
     global map_overview
     global island_rect
     global island_2_chest_open
-    global off_island2
     global sword_draw
     global sword_delay
     global curr_enemy_list
@@ -678,10 +686,7 @@ def island2():
             land_on_island(island2_obj)
 
         # make player leave if exit bottom of island
-        if player_obj.rect.y + player_obj.size >= island2_obj.position_y_close + island2_obj.height:
-            island2_obj.overview = False
-            map_overview = True
-            off_island2 = True
+        check_leave_island(island2_obj)
 
         # code to check collision between player and chest, output a found treasure message, and add that treasure to player inventory
         if pygame.sprite.collide_rect(player_obj, island_2_chest) and not island_2_chest_open and not enemies_island2:
@@ -733,8 +738,6 @@ def world_map():
     # make variables global so they can be used
     global map_overview
     global on_island
-    global off_island
-    global off_island2
     global island_rect
     global curr_enemy_list
     global pause_timer
@@ -757,11 +760,11 @@ def world_map():
         player_obj.draw(screen)
 
         # what happens when player leaves first island
-        if off_island:
+        if island_obj.off:
             leave_island(island_obj)
 
         # what happens when player leaves second island
-        if off_island2:
+        if island2_obj.off:
             leave_island(island2_obj)
 
         # if player is in map/sailing screen and they go off the edge, make them reappear on the opposite one
