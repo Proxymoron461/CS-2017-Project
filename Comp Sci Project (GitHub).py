@@ -82,7 +82,7 @@ class Player(pygame.sprite.Sprite):
 
 
 # initialise player object
-player_obj = Player(250, 250, 20)
+player_obj = Player(350, 250, 20)
 
 
 # initialise island class
@@ -110,6 +110,7 @@ class Island(pygame.sprite.Sprite):
         self.overview = False
         self.off = False  # boolean to check if player has left island
         self.chest_open = False  # boolean to check if island chest is open
+        self.island_location = False # boolean to determine if island spawn location is all good (no collisions)
 
     def draw_close(self, screen):  # drawing code for when player is on island
         pygame.draw.rect(screen, self.colour, self.rect_close)
@@ -124,11 +125,6 @@ class Island(pygame.sprite.Sprite):
         #     self.grid_player_y = self.player_y // self.grid_margin
         #     return [self.grid_player_x, self.grid_player_y]
 
-
-# initialise island objects
-island_obj = Island(400, 400, 450, 150)
-island2_obj = Island(300, 300, 200, 300)
-centre_island_obj = Island(400, 400, ((WIDTH / 2) - 50), ((HEIGHT / 2) - 50))
 
 # create map class, for use
 class Map():
@@ -152,7 +148,7 @@ class MovingEnemy(pygame.sprite.Sprite):
         self.rect.x = start_x  # enemy x position
         self.rect.y = start_y  # enemy y position
         self.health = 1  # integer for health value, each hit does damage of 1
-        self.dead = False  # boolean for if enemy is dead or not
+        # self.dead = False  # boolean for if enemy is dead or not
         self.damage = 1  # boolean for damage enemy does to player health
         self.invulnerable = False  # boolean for if enemy can take damage or not
         self.invulnerable_timer = pygame.time.get_ticks()  # sets the current time as reference for invincibility
@@ -219,8 +215,7 @@ class MovingEnemy(pygame.sprite.Sprite):
         self.rect.y += self.change_y
 
     def draw(self, screen):
-        if not self.dead:
-            pygame.draw.rect(screen, self.colour, self.rect)
+        pygame.draw.rect(screen, self.colour, self.rect)
 
 
 # class for stationary, shooting enemies
@@ -235,7 +230,7 @@ class GunEnemy(pygame.sprite.Sprite):
         self.rect.x = start_x  # enemy x position
         self.rect.y = start_y  # enemy y position
         self.health = 2  # integer for health value, each hit does damage of 1
-        self.dead = False  # boolean for if enemy is dead or not
+        # self.dead = False  # boolean for if enemy is dead or not
         self.invulnerable = False # boolean for if enemy can be hit
         self.invulnerable_timer = pygame.time.get_ticks() # sets the current time as reference for invincibility
         self.attack_timer = pygame.time.get_ticks() # sets the current time as reference for attacking
@@ -265,8 +260,7 @@ class GunEnemy(pygame.sprite.Sprite):
             self.attack_timer = pygame.time.get_ticks()
 
     def draw(self, screen):
-        if not self.dead:
-            pygame.draw.rect(screen, self.colour, self.rect)
+        pygame.draw.rect(screen, self.colour, self.rect)
 
 
 # initialise bullet class, for enemy attacks
@@ -297,10 +291,10 @@ class Sword(pygame.sprite.Sprite):
     def __init__(self, size):
         super().__init__()
         self.size = size
-        self.colour = BLACK
+        # self.colour = BLACK
         # load pygame image sprite
         self.image = pygame.image.load("Sword.png").convert()
-        self.image.set_colorkey(BLACK)
+        self.image.set_colorkey(WHITE)
         self.rect = self.image.get_rect()
         self.rect.x = player_obj.rect.x + player_obj.size
         self.rect.y = player_obj.rect.y + player_obj.size
@@ -335,9 +329,12 @@ class Sword(pygame.sprite.Sprite):
         elif player_obj.last_y == 0:
             self.rect.y = player_obj.rect.y + (player_obj.size / 2) - (self.size / 2)
 
-    def attack_collision(self):
+    def attack_collision(self, enemy_list):
+        # make variables global
+        global enemies_island
+        global enemies_island2
         # create list of enemies hit by player sword
-        enemies_hit_list = pygame.sprite.spritecollide(self, enemies, False)
+        enemies_hit_list = pygame.sprite.spritecollide(self, enemy_list, False)
         for enemy in enemies_hit_list:
             if not enemy.invulnerable:
                 enemy.health -= 1
@@ -376,10 +373,12 @@ class TreasureChest(pygame.sprite.Sprite):
 # miscellaneous values
 map.overview = True  # boolean for when player is in map
 on_island = False  # boolean for when player gets onto island
+island_obj = Island(300, 300, 0, 0)
+island2_obj = Island(300, 300, 0, 0)
+centre_island_obj = Island(400, 400, ((WIDTH / 2) - 50), ((HEIGHT / 2) - 50))
 islands = pygame.sprite.Group()  # initialise list of islands
 islands.add(island_obj)  # add first island object to list of islands
 islands.add(island2_obj)  # add second island object to list of islands
-islands.add(centre_island_obj)  # add central island to list of islands
 enemies = pygame.sprite.Group()  # create list of all enemies
 enemies_island2 = pygame.sprite.Group()  # create list of enemies for island 2
 enemies_island = pygame.sprite.Group()  # create list of enemies for island 1
@@ -394,6 +393,26 @@ enemy_move_timer = 0  # timer for when enemy can calculate movement
 chests = pygame.sprite.Group()  # group for all chests in game
 curr_enemy_list = enemies  # current list for enemy collision
 treasure_message_display = False  # boolean for if treasure chest message should be displayed
+
+# function to spawn islands on map
+def island_spawn():
+    # generate list of island positions for use
+    x_position_list = [25, 75, 100, 125, 150, 175, 200, 250, 275, 300, 325, 350, 375, 425, 450, 475, 500, 550, 525, 575]
+    y_position_list = [25, 75, 100, 150, 175, 200, 225, 250, 275, 325, 375]
+    # assign island positions to each island, except for centre_island
+    for island in islands:
+        islands.remove(island)
+        while not island.island_location:
+            index_x = random.choice(x_position_list)
+            index_y = random.choice(y_position_list)
+            island.rect.x = index_x
+            island.rect.y = index_y
+            if not pygame.sprite.spritecollideany(island, islands) and not pygame.sprite.collide_rect(island, centre_island_obj):
+                island.island_location = True
+                islands.add(island)
+                x_position_list.remove(index_x)
+                y_position_list.remove(index_y)
+    islands.add(centre_island_obj)  # add centre_island to list of islands
 
 
 # function to spawn enemies on location (island, dungeon room, etc)
@@ -450,14 +469,14 @@ def screen_update():
 
 
 # function to draw sword to screen
-def draw_sword():
+def draw_sword(location_list):
     # make variables global
     global sword_draw
     # code to determine if sword is drawn to screen
     if sword_draw:
         if player_obj.change_x == 0 and player_obj.change_y == 0 and player_obj.health > 0:
             sword_obj.draw(screen)
-            sword_obj.attack_collision()
+            sword_obj.attack_collision(location_list)
         else:
             sword_draw = False
         if pygame.time.get_ticks() - sword_delay >= 700:
@@ -478,23 +497,19 @@ def draw_bullet():
             bullet_shot.kill()
 
 
-
 # function to determine whether enemies are dead or not
 def enemy_health_check():
-    for enemy_obj in enemies:
-        if enemy_obj.health <= 0:
-            enemy_obj.dead = True
+    for enemy in enemies_hit:
+        if enemy.health <= 0:
+            enemy.kill()
 
 
 # function to determine whether enemies are removed from groups (killed) or if they attack
-def enemy_kill_or_move(location_list):
-    for enemy_obj in location_list:
-        if enemy_obj.dead:
-            enemy_obj.kill()
-        else:
-            enemy_obj.draw(screen)
+def enemy_draw_move(location_list):
+    for enemy in location_list:
+        enemy.draw(screen)
         if player_obj.health > 0:
-            enemy_obj.attack()
+            enemy.attack()
 
 
 def player_draw_or_move():
@@ -519,15 +534,17 @@ def land_on_island(curr_island):
 
 
 # function to deal with attacking
-def sword_attack():
+def sword_attack(location_list):
     # make variables global
     global sword_delay
     global sword_draw
+    global enemies_island
+    global enemies_island2
     # code for attacking and bringing player to halt
     player_obj.halt_speed()
     sword_draw = True
     sword_obj.attack()
-    sword_obj.attack_collision()
+    sword_obj.attack_collision(location_list)
     sword_delay = pygame.time.get_ticks()  # amount of milliseconds before sword sprite disappears
 
 
@@ -600,7 +617,7 @@ def check_player_enemy_collision():
     # code to check collision between player and enemy
     enemy_damage_list = pygame.sprite.spritecollide(player_obj, enemies, False)
     for enemy in enemy_damage_list:
-        if (not enemy.dead) and (not player_obj.invulnerable):
+        if not player_obj.invulnerable:
             player_obj.take_damage(enemy)
             player_obj.invulnerable = True
             player_obj.invulnerable_timer = pygame.time.get_ticks()
@@ -644,12 +661,14 @@ def island_collision(island, island_enemies_list):
 
 
 # function to take care of key presses while in locations like islands on dungeons
-def location_movement(curr_location):
+def location_movement(curr_location, location_list):
     # make variables global
     global done
     global pause_timer
     global sword_draw
     global sword_delay
+    global enemies_island
+    global enemies_island2
     # code for key presses + movement
     for event in pygame.event.get():  # if the user does something
         if event.type == pygame.QUIT or event.type == pygame.K_ESCAPE:  # if the user clicks close or presses escape
@@ -676,7 +695,7 @@ def location_movement(curr_location):
                 pause_timer = pygame.time.get_ticks()
                 pause(curr_location)
             if event.key == pygame.K_SPACE:
-                sword_attack()
+                sword_attack(location_list)
         if event.type == pygame.KEYUP:  # if key is released, movement stops
             if (event.key == pygame.K_UP or event.key == pygame.K_DOWN or event.key == pygame.K_w or
                         event.key == pygame.K_s):
@@ -750,6 +769,9 @@ island_2_chest = TreasureChest(40, island2_obj.position_x_close + (island2_obj.w
                                island2_obj.position_y_close + 40 - 20, "Sword of Awesome")
 chests.add(island_2_chest)
 
+# assign island spawn locations
+island_spawn()
+
 # create all enemy objects for use on island 1
 island_moving_enemy_spawn(enemies_island)
 
@@ -807,7 +829,7 @@ def island():
 
     while island_obj.overview:
         # code for key presses + movement
-        location_movement(island_obj)
+        location_movement(island_obj, enemies_island)
 
         # fill screen with background colour
         screen.fill(SEABLUE)
@@ -816,7 +838,7 @@ def island():
         island_obj.draw_close(screen)
 
         # code to remove enemies from enemies_island list, draw them to screen, and have them attack
-        enemy_kill_or_move(enemies_island)
+        enemy_draw_move(enemies_island)
 
         # code to spawn chest on island
         if not enemies_island:
@@ -861,7 +883,7 @@ def island():
             draw_bullet()
 
         # draw sword to screen
-        draw_sword()
+        draw_sword(enemies_island)
 
         # update screen and framerate
         screen_update()
@@ -884,7 +906,7 @@ def island2():
 
     while island2_obj.overview:
         # code for key presses + movement
-        location_movement(island2_obj)
+        location_movement(island2_obj, enemies_island2)
 
         # fill screen with background colour
         screen.fill(SEABLUE)
@@ -893,7 +915,7 @@ def island2():
         island2_obj.draw_close(screen)
 
         # code to remove enemies from enemies_island list, draw them to screen, and have them attack
-        enemy_kill_or_move(enemies_island2)
+        enemy_draw_move(enemies_island2)
 
         # code to spawn chest on island
         if not enemies_island2:
@@ -935,7 +957,7 @@ def island2():
             draw_bullet()
 
         # draw sword to screen
-        draw_sword()
+        draw_sword(enemies_island2)
 
         # update screen and framerate
         screen_update()
