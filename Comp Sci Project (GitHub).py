@@ -1,6 +1,7 @@
 # import modules
 import pygame
 import random
+import math
 from math import pi
 
 # defining a few colours, using their RGB value
@@ -49,8 +50,8 @@ class Player(pygame.sprite.Sprite):
         self.enemies_killed = 0
         self.last_x = 0  # most recent x direction of player
         self.last_y = -1  # most recent y direction of player
-        self.health = 30  # integer for player health
-        self.max_health = 30  # integer for maximum player health
+        self.health = 5  # integer for player health
+        self.max_health = 5  # integer for maximum player health
         self.invulnerable = False  # boolean for if player is invulnerable or not
         self.invulnerable_timer = pygame.time.get_ticks()  # create reference timer for invulnerability period
         self.inventory = []  # empty list for use in inventory
@@ -67,8 +68,8 @@ class Player(pygame.sprite.Sprite):
     def draw(self, screen):
         pygame.draw.rect(screen, self.colour, self.rect)
 
-    def take_damage(self, enemy_obj):
-        self.health -= enemy_obj.damage  # take away enemy damage from player health
+    def take_damage(self, damage_source):
+        self.health -= damage_source.damage  # take away enemy damage from player health
 
     def message(self, text):
         output_text = font.render(text, True, WHITE)
@@ -129,8 +130,15 @@ island_obj = Island(400, 400, 450, 150)
 island2_obj = Island(300, 300, 200, 300)
 centre_island_obj = Island(400, 400, ((WIDTH / 2) - 50), ((HEIGHT / 2) - 50))
 
+# create map class, for use
+class Map():
+    def __init__(self):
+        self.overview = True
 
-# initialise enemy class, intended as parent class for future enemies
+# create map object
+map = Map()
+
+# initialise moving enemy class, intended as parent class for future enemies
 class MovingEnemy(pygame.sprite.Sprite):
     def __init__(self, size, colour, start_x, start_y, health, damage):
         super().__init__()
@@ -148,11 +156,11 @@ class MovingEnemy(pygame.sprite.Sprite):
         self.damage = 1  # boolean for damage enemy does to player health
         self.invulnerable = False  # boolean for if enemy can take damage or not
         self.invulnerable_timer = pygame.time.get_ticks()  # sets the current time as reference for invincibility
-        self.move_timer = pygame.time.get_ticks()  # sets current time as reference for move calculation
-        self.chest_collision = False  # boolean for if enemy has collided with a chest
+        self.move_timer = pygame.time.get_ticks()  # sets current time as reference for attack calculation
+        # self.chest_collision = False  # boolean for if enemy has collided with a chest
         # self.aggressive = True #boolean for if enemy should be attacking or not
-        self.move_rect = (self.size, 45, self.rect.x + self.size,
-                          self.rect.y + self.size)  # set rectangle for checking movement path
+       # self.move_rect = (self.size, 45, self.rect.x + self.size,
+                          # self.rect.y + self.size)  # set rectangle for checking movement path
 
     # def check_movement(self):
     #     # code to stop enemies merging
@@ -170,7 +178,7 @@ class MovingEnemy(pygame.sprite.Sprite):
     #     curr_enemy_list.add(self)
 
     def move_attack(self):
-        # code to move enemy towards player aggressively
+        # code to attack enemy towards player aggressively
         if pygame.time.get_ticks() - self.move_timer >= 500:
             if abs(player_obj.rect.x - self.rect.x) < abs(player_obj.rect.y - self.rect.y):
                 if player_obj.rect.y > self.rect.y:
@@ -191,7 +199,7 @@ class MovingEnemy(pygame.sprite.Sprite):
                     self.change_y = 0
                     self.move_timer = pygame.time.get_ticks()
 
-    def move(self):
+    def attack(self):
         self.rect.clamp_ip(island_rect)  # keep enemy on island
 
         # #code to check how close player is to enemy
@@ -213,6 +221,75 @@ class MovingEnemy(pygame.sprite.Sprite):
     def draw(self, screen):
         if not self.dead:
             pygame.draw.rect(screen, self.colour, self.rect)
+
+
+# class for stationary, shooting enemies
+class GunEnemy(pygame.sprite.Sprite):
+    def __init__(self, size, colour, start_x, start_y, health, damage):
+        super().__init__()
+        self.size = size
+        self.colour = colour
+        self.image = pygame.Surface([self.size, self.size])
+        self.image.fill(self.colour)
+        self.rect = self.image.get_rect()
+        self.rect.x = start_x  # enemy x position
+        self.rect.y = start_y  # enemy y position
+        self.health = 2  # integer for health value, each hit does damage of 1
+        self.dead = False  # boolean for if enemy is dead or not
+        self.invulnerable = False # boolean for if enemy can be hit
+        self.invulnerable_timer = pygame.time.get_ticks() # sets the current time as reference for invincibility
+        self.attack_timer = pygame.time.get_ticks() # sets the current time as reference for attacking
+        self.can_attack = False # boolean for if the enemy can attack
+        self.damage = 0 # integer for how much damage dealt to player health
+
+    def attack(self):
+        # make variables global
+        global screen
+        # check enemy can attack
+        if pygame.time.get_ticks() - self.attack_timer >= 2000:
+            self.can_attack = True
+        if self.can_attack and not pygame.sprite.collide_rect(self, player_obj):
+            # code to determine bullet direction and speed
+            bullet_x_direction = (player_obj.rect.x - self.rect.x) / math.sqrt((player_obj.rect.x - self.rect.x) ** 2 +
+                                                                  (player_obj.rect.y - self.rect.y) ** 2)
+            bullet_y_direction = (player_obj.rect.y - self.rect.y) / math.sqrt((player_obj.rect.x - self.rect.x) ** 2 +
+                                                                  (player_obj.rect.y - self.rect.y) ** 2)
+            bullet_x_speed = bullet_x_direction * 5
+            bullet_y_speed = bullet_y_direction * 5
+            # create bullet object
+            bullet = Bullet(15, BLACK, self.rect.x, self.rect.y, bullet_x_speed, bullet_y_speed)
+            bullets.add(bullet)
+            bullet.move()
+            bullet.draw(screen)
+            self.can_attack = False
+            self.attack_timer = pygame.time.get_ticks()
+
+    def draw(self, screen):
+        if not self.dead:
+            pygame.draw.rect(screen, self.colour, self.rect)
+
+
+# initialise bullet class, for enemy attacks
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self, size, colour, start_x, start_y, x_speed, y_speed):
+        super().__init__()
+        self.size = size
+        self.colour = colour
+        self.image = pygame.Surface([self.size, self.size])
+        self.image.fill(self.colour)
+        self.rect = self.image.get_rect()
+        self.rect.x = start_x
+        self.rect.y = start_y
+        self.x_speed = x_speed
+        self.y_speed = y_speed
+        self.damage = 2 # integer for damage dealt to player health
+
+    def draw(self, screen):
+        pygame.draw.rect(screen, self.colour, self.rect)
+
+    def move(self):
+        self.rect.x += self.x_speed
+        self.rect.y += self.y_speed
 
 
 # initialise sword class, for attacking
@@ -297,7 +374,7 @@ class TreasureChest(pygame.sprite.Sprite):
 
 
 # miscellaneous values
-map_overview = True  # boolean for when player is in map
+map.overview = True  # boolean for when player is in map
 on_island = False  # boolean for when player gets onto island
 islands = pygame.sprite.Group()  # initialise list of islands
 islands.add(island_obj)  # add first island object to list of islands
@@ -310,6 +387,7 @@ enemies_dungeon = pygame.sprite.Group()  # create list of enemies for dungeon
 enemies_hit = pygame.sprite.Group()  # create list of enemies hit by sword
 sword_draw = False  # boolean for if sword should be drawn
 swords = pygame.sprite.Group()  # create list of swords
+bullets = pygame.sprite.Group() # create list of bullets
 font = pygame.font.SysFont('Arial Black', 18, True, False)  # created font for use in player messages
 paused = False  # boolean for if the game is paused
 enemy_move_timer = 0  # timer for when enemy can calculate movement
@@ -319,7 +397,7 @@ treasure_message_display = False  # boolean for if treasure chest message should
 
 
 # function to spawn enemies on location (island, dungeon room, etc)
-def island_enemy_spawn(location_list):
+def island_moving_enemy_spawn(location_list):
     # make variables global
     global enemies_island
     global enemies_island2
@@ -332,6 +410,18 @@ def island_enemy_spawn(location_list):
         enemy_obj.rect.x += (index * 50)
         enemy_obj.rect.y += (index * 50)
 
+def island_gun_enemy_spawn(location_list):
+    # make variables global
+    global enemies_island
+    global enemies_island2
+    global enemies
+    # for loop determining enemy spawn
+    for index in range(3):
+        enemy_obj = GunEnemy(20, ENEMY_PURPLE, 300, 150, 1, 1)
+        location_list.add(enemy_obj)
+        enemies.add(enemy_obj)
+        enemy_obj.rect.x += (index * 50)
+        enemy_obj.rect.y += (index * 50)
 
 # function to keep timers ticking over while paused
 def timer_continue():
@@ -374,6 +464,21 @@ def draw_sword():
             sword_draw = False
 
 
+# function to determine bullet movement
+def draw_bullet():
+    # make variables global
+    global screen
+    # iterate through list of bullets, and either draw and move, or remove from list
+    for bullet_shot in bullets:
+        if ((bullet_shot.rect.x < WIDTH and bullet_shot.rect.x > 0 - bullet_shot.size) and
+                (bullet_shot.rect.y < HEIGHT and bullet_shot.rect.y > 0 - bullet_shot.size)):
+            bullet_shot.move()
+            bullet_shot.draw(screen)
+        else:
+            bullet_shot.kill()
+
+
+
 # function to determine whether enemies are dead or not
 def enemy_health_check():
     for enemy_obj in enemies:
@@ -381,7 +486,7 @@ def enemy_health_check():
             enemy_obj.dead = True
 
 
-# function to determine whether enemies are removed from groups (killed) or if they move
+# function to determine whether enemies are removed from groups (killed) or if they attack
 def enemy_kill_or_move(location_list):
     for enemy_obj in location_list:
         if enemy_obj.dead:
@@ -389,7 +494,7 @@ def enemy_kill_or_move(location_list):
         else:
             enemy_obj.draw(screen)
         if player_obj.health > 0:
-            enemy_obj.move()
+            enemy_obj.attack()
 
 
 def player_draw_or_move():
@@ -428,12 +533,10 @@ def sword_attack():
 
 # function to determine what happens when island is left
 def check_leave_island(curr_island):
-    # make variables global
-    global map_overview
     # code to check if island is being left
     if player_obj.rect.y + player_obj.size >= curr_island.position_y_close + curr_island.height:
         curr_island.overview = False
-        map_overview = True
+        map.overview = True
         curr_island.off = True
 
 
@@ -447,7 +550,8 @@ def leave_island(island):
     player_obj.change_x = 0
     player_obj.change_y = 0
     island.off = False
-    treasure_message_display = False
+    treasure_message_display = False # stop displaying treasure message
+    bullets.empty() # remove all bullets from group
 
 
 # function to determine if player and chest have collided
@@ -501,6 +605,16 @@ def check_player_enemy_collision():
             player_obj.invulnerable = True
             player_obj.invulnerable_timer = pygame.time.get_ticks()
 
+# function to check for collision between player and bullets
+def check_player_bullet_collision():
+    # code to check collision between player and bullets
+    bullet_hit_list = pygame.sprite.spritecollide(player_obj, bullets, True)
+    for bullet_hit in bullet_hit_list:
+        if not player_obj.invulnerable:
+            player_obj.take_damage(bullet_hit)
+            player_obj.invulnerable = True
+            player_obj.invulnerable_timer = pygame.time.get_ticks()
+
 
 # function to ensure map wrap around to keep player on screen
 def map_wraparound():
@@ -517,13 +631,12 @@ def map_wraparound():
 # function for island collision on map
 def island_collision(island, island_enemies_list):
     # make variables global
-    global map_overview
     global on_island
     global island_rect
     global curr_enemy_list
 
     # code for collision
-    map_overview = False
+    map.overview = False
     island.overview = True
     on_island = True
     island_rect = island.boundary_rect
@@ -561,7 +674,7 @@ def location_movement(curr_location):
                 player_obj.last_x = 1
             if event.key == pygame.K_p:
                 pause_timer = pygame.time.get_ticks()
-                pause()
+                pause(curr_location)
             if event.key == pygame.K_SPACE:
                 sword_attack()
         if event.type == pygame.KEYUP:  # if key is released, movement stops
@@ -574,7 +687,7 @@ def location_movement(curr_location):
 
 
 # function for key presses while paused
-def pause_interaction():
+def pause_interaction(curr_location):
     # make variables global
     global paused
     global done
@@ -582,6 +695,7 @@ def pause_interaction():
     for event in pygame.event.get():
         if event.type == pygame.QUIT or event.type == pygame.K_ESCAPE:
             paused = False
+            curr_location.overview = False
             done = True
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_p:
@@ -592,13 +706,12 @@ def pause_interaction():
 def map_movement():
     # make variables global
     global done
-    global map_overview
     global pause_timer
     # code for key presses and movement
     for event in pygame.event.get():  # if the user does something
         if event.type == pygame.QUIT or event.type == pygame.K_ESCAPE:  # if the user clicks close or presses escape
             done = True
-            map_overview = False
+            map.overview = False
         if event.type == pygame.KEYDOWN:  # if key is pressed, movement starts
             if event.key == pygame.K_UP or event.key == pygame.K_w:
                 player_obj.change_y = -5
@@ -618,7 +731,7 @@ def map_movement():
                 player_obj.last_x = 1
             if event.key == pygame.K_p:
                 pause_timer = pygame.time.get_ticks()
-                pause()
+                pause(map)
         if event.type == pygame.KEYUP:  # if key is released, movement stops
             if (event.key == pygame.K_UP or event.key == pygame.K_DOWN or event.key == pygame.K_w or
                         event.key == pygame.K_s):
@@ -638,10 +751,10 @@ island_2_chest = TreasureChest(40, island2_obj.position_x_close + (island2_obj.w
 chests.add(island_2_chest)
 
 # create all enemy objects for use on island 1
-island_enemy_spawn(enemies_island)
+island_moving_enemy_spawn(enemies_island)
 
 # create all enemy objects for use on island 2
-island_enemy_spawn(enemies_island2)
+island_gun_enemy_spawn(enemies_island2)
 
 # main program loop setup
 done = False
@@ -649,7 +762,7 @@ clock = pygame.time.Clock()
 
 
 # create pause function, to be in effect while pausing
-def pause():
+def pause(curr_location):
     # make variables global
     global paused
 
@@ -662,7 +775,7 @@ def pause():
     # pause loop
     while paused:
         # code for key presses
-        pause_interaction()
+        pause_interaction(curr_location)
 
         # code to make black screen with overlay message
         screen.fill(BLACK)
@@ -683,7 +796,6 @@ def island():
     global treasure_message_timer
     global done
     global on_island
-    global map_overview
     global island_rect
     global sword_draw
     global sword_delay
@@ -703,14 +815,14 @@ def island():
         # draw the island up close
         island_obj.draw_close(screen)
 
-        # code to remove enemies from enemies_island list, draw them to screen, and have them move
+        # code to remove enemies from enemies_island list, draw them to screen, and have them attack
         enemy_kill_or_move(enemies_island)
 
         # code to spawn chest on island
         if not enemies_island:
             island_chest.draw(screen)
 
-        # have player move (on island)
+        # have player attack (on island)
         player_obj.move_close()
 
         # what happens when player spawns on island
@@ -741,6 +853,13 @@ def island():
         # code to check collision between player and enemy
         check_player_enemy_collision()
 
+        # code to check collision between player and bullet
+        check_player_bullet_collision()
+
+        # code to check bullet shooting
+        if bullets:
+            draw_bullet()
+
         # draw sword to screen
         draw_sword()
 
@@ -755,7 +874,6 @@ def island2():
     global treasure_message_timer
     global done
     global on_island
-    global map_overview
     global island_rect
     global sword_draw
     global sword_delay
@@ -774,14 +892,14 @@ def island2():
         # draw the island up close
         island2_obj.draw_close(screen)
 
-        # code to remove enemies from enemies_island list, draw them to screen, and have them move
+        # code to remove enemies from enemies_island list, draw them to screen, and have them attack
         enemy_kill_or_move(enemies_island2)
 
         # code to spawn chest on island
         if not enemies_island2:
             island_2_chest.draw(screen)
 
-        # have player move (on an island)
+        # have player attack (on an island)
         player_obj.move_close()
 
         # what happens when player spawns on island
@@ -812,6 +930,10 @@ def island2():
         # code to check collision between player and enemy
         check_player_enemy_collision()
 
+        # code to check bullet shooting
+        if bullets:
+            draw_bullet()
+
         # draw sword to screen
         draw_sword()
 
@@ -822,7 +944,6 @@ def island2():
 # create map function, to be used while on world map
 def world_map():
     # make variables global so they can be used
-    global map_overview
     global on_island
     global island_rect
     global curr_enemy_list
@@ -832,7 +953,7 @@ def world_map():
     player_obj.halt_speed()
 
     # map loop
-    while map_overview:
+    while map.overview:
         # function for key presses and movement
         map_movement()
 
@@ -844,7 +965,7 @@ def world_map():
         island2_obj.draw_map(screen)
         centre_island_obj.draw_map(screen)
 
-        # have player move (map overview) and draw it to screen
+        # have player attack (map overview) and draw it to screen
         player_obj.move_map()
         player_obj.draw(screen)
 
@@ -873,7 +994,7 @@ def world_map():
 # main program loop
 while not done:
     # functions for different areas
-    if map_overview:
+    if map.overview:
         world_map()
 
     if island_obj.overview:
