@@ -5,18 +5,18 @@ import math
 from math import pi
 
 # defining a few colours, using their RGB value
-BLUE = (0, 0, 255)
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 RED = (255, 0, 0)
 BROWN = (102, 51, 0)
-SEABLUE = (0, 191, 255)  # colour for sea
-GRASSGREEN = (0, 204, 0)  # colour for green grassy islands
+SEA_BLUE = (0, 191, 255)  # colour for sea
+GRASS_GREEN = (0, 204, 0)  # colour for green grassy islands
 SAND = (204, 204, 0)  # colour for beach islands
 ROCK = (128, 128, 128)  # colour for rock islands
-ENEMY_PURPLE = (255, 51, 255)  # stand-in colour for enemies
-island_material = (GRASSGREEN, SAND, ROCK)  # tuple for the island material
+MOVING_ENEMY_PURPLE = (255, 51, 255)  # stand-in colour for moving enemies
+GUN_ENEMY_BLUE = (0, 0, 255)
+island_material = (GRASS_GREEN, SAND, ROCK)  # tuple for the island material
 
 # initialise PI, for some ellipses and arcs
 PI = pi
@@ -110,7 +110,7 @@ class Island(pygame.sprite.Sprite):
         self.overview = False
         self.off = False  # boolean to check if player has left island
         self.chest_open = False  # boolean to check if island chest is open
-        self.island_location = False # boolean to determine if island spawn location is all good (no collisions)
+        self.island_location = False  # boolean to determine if island spawn location is all good (no collisions)
 
     def draw_close(self, screen):  # drawing code for when player is on island
         pygame.draw.rect(screen, self.colour, self.rect_close)
@@ -131,12 +131,14 @@ class Map():
     def __init__(self):
         self.overview = True
 
+
 # create map object
 map = Map()
 
+
 # initialise moving enemy class, intended as parent class for future enemies
 class MovingEnemy(pygame.sprite.Sprite):
-    def __init__(self, size, colour, start_x, start_y, health, damage):
+    def __init__(self, size, colour, start_x, start_y):
         super().__init__()
         self.change_x = 0  # initial x speed
         self.change_y = 0  # initial y speed
@@ -153,10 +155,11 @@ class MovingEnemy(pygame.sprite.Sprite):
         self.invulnerable = False  # boolean for if enemy can take damage or not
         self.invulnerable_timer = pygame.time.get_ticks()  # sets the current time as reference for invincibility
         self.move_timer = pygame.time.get_ticks()  # sets current time as reference for attack calculation
+        self.found_location = False # boolean to check if position is correct
         # self.chest_collision = False  # boolean for if enemy has collided with a chest
         # self.aggressive = True #boolean for if enemy should be attacking or not
-       # self.move_rect = (self.size, 45, self.rect.x + self.size,
-                          # self.rect.y + self.size)  # set rectangle for checking movement path
+        # self.move_rect = (self.size, 45, self.rect.x + self.size,
+        # self.rect.y + self.size)  # set rectangle for checking movement path
 
     # def check_movement(self):
     #     # code to stop enemies merging
@@ -220,7 +223,7 @@ class MovingEnemy(pygame.sprite.Sprite):
 
 # class for stationary, shooting enemies
 class GunEnemy(pygame.sprite.Sprite):
-    def __init__(self, size, colour, start_x, start_y, health, damage):
+    def __init__(self, size, colour, start_x, start_y):
         super().__init__()
         self.size = size
         self.colour = colour
@@ -231,11 +234,12 @@ class GunEnemy(pygame.sprite.Sprite):
         self.rect.y = start_y  # enemy y position
         self.health = 2  # integer for health value, each hit does damage of 1
         # self.dead = False  # boolean for if enemy is dead or not
-        self.invulnerable = False # boolean for if enemy can be hit
-        self.invulnerable_timer = pygame.time.get_ticks() # sets the current time as reference for invincibility
-        self.attack_timer = pygame.time.get_ticks() # sets the current time as reference for attacking
-        self.can_attack = False # boolean for if the enemy can attack
-        self.damage = 0 # integer for how much damage dealt to player health
+        self.invulnerable = False  # boolean for if enemy can be hit
+        self.invulnerable_timer = pygame.time.get_ticks()  # sets the current time as reference for invincibility
+        self.attack_timer = pygame.time.get_ticks()  # sets the current time as reference for attacking
+        self.can_attack = False  # boolean for if the enemy can attack
+        self.damage = 0  # integer for how much damage dealt to player health
+        self.found_location = False  # boolean to check if position is correct
 
     def attack(self):
         # make variables global
@@ -246,9 +250,9 @@ class GunEnemy(pygame.sprite.Sprite):
         if self.can_attack and not pygame.sprite.collide_rect(self, player_obj):
             # code to determine bullet direction and speed
             bullet_x_direction = (player_obj.rect.x - self.rect.x) / math.sqrt((player_obj.rect.x - self.rect.x) ** 2 +
-                                                                  (player_obj.rect.y - self.rect.y) ** 2)
+                                                                               (player_obj.rect.y - self.rect.y) ** 2)
             bullet_y_direction = (player_obj.rect.y - self.rect.y) / math.sqrt((player_obj.rect.x - self.rect.x) ** 2 +
-                                                                  (player_obj.rect.y - self.rect.y) ** 2)
+                                                                               (player_obj.rect.y - self.rect.y) ** 2)
             bullet_x_speed = bullet_x_direction * 5
             bullet_y_speed = bullet_y_direction * 5
             # create bullet object
@@ -276,7 +280,7 @@ class Bullet(pygame.sprite.Sprite):
         self.rect.y = start_y
         self.x_speed = x_speed
         self.y_speed = y_speed
-        self.damage = 2 # integer for damage dealt to player health
+        self.damage = 2  # integer for damage dealt to player health
 
     def draw(self, screen):
         pygame.draw.rect(screen, self.colour, self.rect)
@@ -386,13 +390,14 @@ enemies_dungeon = pygame.sprite.Group()  # create list of enemies for dungeon
 enemies_hit = pygame.sprite.Group()  # create list of enemies hit by sword
 sword_draw = False  # boolean for if sword should be drawn
 swords = pygame.sprite.Group()  # create list of swords
-bullets = pygame.sprite.Group() # create list of bullets
+bullets = pygame.sprite.Group()  # create list of bullets
 font = pygame.font.SysFont('Arial Black', 18, True, False)  # created font for use in player messages
 paused = False  # boolean for if the game is paused
 enemy_move_timer = 0  # timer for when enemy can calculate movement
 chests = pygame.sprite.Group()  # group for all chests in game
 curr_enemy_list = enemies  # current list for enemy collision
 treasure_message_display = False  # boolean for if treasure chest message should be displayed
+
 
 # function to spawn islands on map
 def island_spawn():
@@ -407,7 +412,8 @@ def island_spawn():
             index_y = random.choice(y_position_list)
             island.rect.x = index_x
             island.rect.y = index_y
-            if not pygame.sprite.spritecollideany(island, islands) and not pygame.sprite.collide_rect(island, centre_island_obj):
+            if not pygame.sprite.spritecollideany(island, islands) and not pygame.sprite.collide_rect(island,
+                                                                                                      centre_island_obj):
                 island.island_location = True
                 islands.add(island)
                 x_position_list.remove(index_x)
@@ -416,31 +422,51 @@ def island_spawn():
 
 
 # function to spawn enemies on location (island, dungeon room, etc)
-def island_moving_enemy_spawn(location_list):
+def island_moving_enemy_spawn(location, location_list):
     # make variables global
     global enemies_island
     global enemies_island2
     global enemies
     # for loop determining enemy spawn
     for index in range(3):
-        enemy_obj = MovingEnemy(20, ENEMY_PURPLE, 300, 150, 1, 1)
-        location_list.add(enemy_obj)
+        enemy_obj = MovingEnemy(20, MOVING_ENEMY_PURPLE, 0, 0)
         enemies.add(enemy_obj)
-        enemy_obj.rect.x += (index * 50)
-        enemy_obj.rect.y += (index * 50)
+        location_list.add(enemy_obj)
+    for enemy in location_list:
+        location_list.remove(enemy)
+        while not enemy.found_location:
+            enemy_x = random.randrange(location.position_x_close + 1, location.position_x_close + location.width - 21)
+            enemy_y = random.randrange(location.position_y_close + 1, location.position_y_close + location.height - 61)
+            enemy.rect.x = enemy_x
+            enemy.rect.y = enemy_y
+            if not pygame.sprite.spritecollideany(enemy, location_list, pygame.sprite.collide_circle):
+                enemy.found_location = True
+                location_list.add(enemy)
+                enemies.add(enemy)
 
-def island_gun_enemy_spawn(location_list):
+
+def island_gun_enemy_spawn(location, location_list):
     # make variables global
     global enemies_island
     global enemies_island2
     global enemies
     # for loop determining enemy spawn
     for index in range(3):
-        enemy_obj = GunEnemy(20, ENEMY_PURPLE, 300, 150, 1, 1)
+        enemy_obj = GunEnemy(20, GUN_ENEMY_BLUE, 300, 150)
         location_list.add(enemy_obj)
         enemies.add(enemy_obj)
-        enemy_obj.rect.x += (index * 50)
-        enemy_obj.rect.y += (index * 50)
+    for enemy in location_list:
+        location_list.remove(enemy)
+        while not enemy.found_location:
+            enemy_x = random.randrange(location.position_x_close + 1, location.position_x_close + location.width - 21)
+            enemy_y = random.randrange(location.position_y_close + 1, location.position_y_close + location.height - 61)
+            enemy.rect.x = enemy_x
+            enemy.rect.y = enemy_y
+            if not pygame.sprite.spritecollideany(enemy, location_list, pygame.sprite.collide_circle):
+                enemy.found_location = True
+                location_list.add(enemy)
+                enemies.add(enemy)
+
 
 # function to keep timers ticking over while paused
 def timer_continue():
@@ -567,8 +593,8 @@ def leave_island(island):
     player_obj.change_x = 0
     player_obj.change_y = 0
     island.off = False
-    treasure_message_display = False # stop displaying treasure message
-    bullets.empty() # remove all bullets from group
+    treasure_message_display = False  # stop displaying treasure message
+    bullets.empty()  # remove all bullets from group
 
 
 # function to determine if player and chest have collided
@@ -622,6 +648,7 @@ def check_player_enemy_collision():
             player_obj.invulnerable = True
             player_obj.invulnerable_timer = pygame.time.get_ticks()
 
+
 # function to check for collision between player and bullets
 def check_player_bullet_collision():
     # code to check collision between player and bullets
@@ -644,6 +671,7 @@ def map_wraparound():
         player_obj.rect.y = HEIGHT + 5
     elif player_obj.rect.y > HEIGHT:
         player_obj.rect.y = (0 - player_obj.size) - 5
+
 
 # function for island collision on map
 def island_collision(island, island_enemies_list):
@@ -773,10 +801,10 @@ chests.add(island_2_chest)
 island_spawn()
 
 # create all enemy objects for use on island 1
-island_moving_enemy_spawn(enemies_island)
+island_moving_enemy_spawn(island_obj, enemies_island)
 
 # create all enemy objects for use on island 2
-island_gun_enemy_spawn(enemies_island2)
+island_gun_enemy_spawn(island2_obj, enemies_island2)
 
 # main program loop setup
 done = False
@@ -832,7 +860,7 @@ def island():
         location_movement(island_obj, enemies_island)
 
         # fill screen with background colour
-        screen.fill(SEABLUE)
+        screen.fill(SEA_BLUE)
 
         # draw the island up close
         island_obj.draw_close(screen)
@@ -909,7 +937,7 @@ def island2():
         location_movement(island2_obj, enemies_island2)
 
         # fill screen with background colour
-        screen.fill(SEABLUE)
+        screen.fill(SEA_BLUE)
 
         # draw the island up close
         island2_obj.draw_close(screen)
@@ -980,7 +1008,7 @@ def world_map():
         map_movement()
 
         # fill screen with background colour
-        screen.fill(SEABLUE)
+        screen.fill(SEA_BLUE)
 
         # draw all islands on map
         island_obj.draw_map(screen)
