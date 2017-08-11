@@ -60,8 +60,8 @@ class Player(pygame.sprite.Sprite):
         self.rect.x += self.change_x
         self.rect.y += self.change_y
 
-    def move_close(self):
-        self.rect.clamp_ip(island_rect)  # keep player on island
+    def move_close(self, location_rect):
+        self.rect.clamp_ip(location_rect)  # keep player on island
         self.rect.x += self.change_x
         self.rect.y += self.change_y
 
@@ -126,10 +126,66 @@ class Island(pygame.sprite.Sprite):
         #     return [self.grid_player_x, self.grid_player_y]
 
 
+# create dungeon class, for use
+class Dungeon():
+    def __init__(self):
+        self.overview = False  # boolean for if dungeon level is on screen
+        self.height = HEIGHT - 100
+        self.width = WIDTH - 100
+        self.colour = ROCK  # stand-in colour for dunegon floor
+        self.image = pygame.Surface([self.width, self.height])
+        self.image.fill(self.colour)
+        self.rect = self.image.get_rect()
+        self.rect.x = 50
+        self.rect.y = 50
+        self.chest_open = False  # boolean for if chest is open
+    def draw(self, screen):
+        pygame.draw.rect(screen, self.colour, self.rect)
+
+
+# create dungeon objects
+dungeon_entrance_obj = Dungeon()
+
+
+# create dungeon door class, for use
+class DungeonDoor(pygame.sprite.Sprite):
+
+    def __init__(self, position_x, position_y):
+        super().__init__()
+        self.height = 40
+        self.width = 30
+        self.image = pygame.image.load("Door.png").convert()
+        self.image.set_colorkey(WHITE)
+        self.rect = self.image.get_rect()
+        self.rect.x = position_x
+        self.rect.y = position_y
+        self.can_open = False  # boolean to check if door can be opened
+
+    def draw(self, screen):
+        screen.blit(self.image, [self.rect.x, self.rect.y])
+
+    def open_door(self, curr_location, destination, destination_enemies_list):
+        # make variables global
+        global curr_enemy_list
+        global location_rect
+
+        # code for collision
+        curr_location.overview = False
+        destination.overview = True
+        curr_enemy_list = destination_enemies_list
+        location_rect = destination.rect
+
+    def check_open(self):
+        if len(player_obj.inventory) == len(islands) - 1:
+            central_island_door.can_open = True
+        else:
+            player_obj.message("You cannot open this door without the treasures...")
+
+
 # create map class, for use
 class Map():
     def __init__(self):
-        self.overview = True
+        self.overview = False  # boolean for if map level is on screen
 
 
 # create map object
@@ -199,7 +255,7 @@ class MovingEnemy(pygame.sprite.Sprite):
                     self.move_timer = pygame.time.get_ticks()
 
     def attack(self):
-        self.rect.clamp_ip(island_rect)  # keep enemy on island
+        self.rect.clamp_ip(location_rect)  # keep enemy on island
 
         # #code to check how close player is to enemy
         # if abs(player_obj.rect.x - self.rect.x) <= 50 or abs(player_obj.rect.y - self.rect.y) <= 50:
@@ -395,8 +451,15 @@ font = pygame.font.SysFont('Arial Black', 18, True, False)  # created font for u
 paused = False  # boolean for if the game is paused
 enemy_move_timer = 0  # timer for when enemy can calculate movement
 chests = pygame.sprite.Group()  # group for all chests in game
+enemies_dungeon_entrance = pygame.sprite.Group()
 curr_enemy_list = enemies  # current list for enemy collision
 treasure_message_display = False  # boolean for if treasure chest message should be displayed
+centre_island_obj.overview = True  # make sure player spawns on central island
+# create dungeon door objects
+central_island_door = DungeonDoor(centre_island_obj.position_x_close + (centre_island_obj.width / 2) - 15,
+                                  centre_island_obj.position_y_close + 40)
+doors = pygame.sprite.Group()
+doors.add(central_island_door)
 
 
 # function to spawn islands on map
@@ -422,16 +485,17 @@ def island_spawn():
 
 
 # function to spawn enemies on location (island, dungeon room, etc)
-def island_moving_enemy_spawn(location, location_list):
+def island_moving_enemy_spawn(location, location_list, enemy_num):
     # make variables global
     global enemies_island
     global enemies_island2
     global enemies
     # for loop determining enemy spawn
-    for index in range(3):
+    for index in range(enemy_num):
         enemy_obj = MovingEnemy(20, MOVING_ENEMY_PURPLE, 0, 0)
         enemies.add(enemy_obj)
         location_list.add(enemy_obj)
+    # random spawn location code
     for enemy in location_list:
         location_list.remove(enemy)
         while not enemy.found_location:
@@ -445,21 +509,51 @@ def island_moving_enemy_spawn(location, location_list):
                 enemies.add(enemy)
 
 
-def island_gun_enemy_spawn(location, location_list):
+def island_gun_enemy_spawn(location, location_list, enemy_num):
     # make variables global
     global enemies_island
     global enemies_island2
     global enemies
     # for loop determining enemy spawn
-    for index in range(3):
-        enemy_obj = GunEnemy(20, GUN_ENEMY_BLUE, 300, 150)
+    for index in range(enemy_num):
+        enemy_obj = GunEnemy(20, GUN_ENEMY_BLUE, 0, 0)
         location_list.add(enemy_obj)
         enemies.add(enemy_obj)
+    # random spawn location code
     for enemy in location_list:
         location_list.remove(enemy)
         while not enemy.found_location:
             enemy_x = random.randrange(location.position_x_close + 1, location.position_x_close + location.width - 21)
             enemy_y = random.randrange(location.position_y_close + 1, location.position_y_close + location.height - 61)
+            enemy.rect.x = enemy_x
+            enemy.rect.y = enemy_y
+            if not pygame.sprite.spritecollideany(enemy, location_list, pygame.sprite.collide_circle):
+                enemy.found_location = True
+                location_list.add(enemy)
+                enemies.add(enemy)
+
+
+# function to spawn enemies in dungeon
+def dungeon_enemy_spawn(location, location_list, moving_enemy_num, gun_enemy_num):
+    # make variables global
+    global enemies_dungeon_entrance
+    global enemies
+    # for loop to determine moving enemy spawn
+    for index in range(moving_enemy_num):
+        enemy_obj = MovingEnemy(20, MOVING_ENEMY_PURPLE, 0, 0)
+        enemies.add(enemy_obj)
+        location_list.add(enemy_obj)
+    # for loop to determine gun enemy spawn
+    for index in range(gun_enemy_num):
+        enemy_obj = GunEnemy(20, GUN_ENEMY_BLUE, 0, 0)
+        location_list.add(enemy_obj)
+        enemies.add(enemy_obj)
+    # random spawn location code
+    for enemy in location_list:
+        location_list.remove(enemy)
+        while not enemy.found_location:
+            enemy_x = random.randrange(location.rect.x + 1, location.rect.x + location.width - 21)
+            enemy_y = random.randrange(location.rect.y + 51, location.rect.y + location.height - 61)
             enemy.rect.x = enemy_x
             enemy.rect.y = enemy_y
             if not pygame.sprite.spritecollideany(enemy, location_list, pygame.sprite.collide_circle):
@@ -523,6 +617,13 @@ def draw_bullet():
             bullet_shot.kill()
 
 
+# # function to check if player can enter central island door and dungeon
+# def check_central_door_open():
+#     if len(player_obj.inventory) == len(islands) - 1:
+#         central_island_door.can_open = True
+#     else:
+#         player_obj.message("You cannot open this door without the treasures...")
+
 # function to determine whether enemies are dead or not
 def enemy_health_check():
     for enemy in enemies_hit:
@@ -554,8 +655,7 @@ def land_on_island(curr_island):
     # code to determine what happens
     player_obj.rect.y = curr_island.position_y_close + (4 * (curr_island.height / 5))
     player_obj.rect.x = curr_island.position_x_close + (curr_island.width / 2) - (player_obj.size / 2)
-    player_obj.change_x = 0
-    player_obj.change_y = 0
+    player_obj.halt_speed()
     on_island = False
 
 
@@ -660,6 +760,19 @@ def check_player_bullet_collision():
             player_obj.invulnerable_timer = pygame.time.get_ticks()
 
 
+# function to check for collision between player and door
+def check_player_door_collision(curr_location, destination, destination_enemies_list):
+    # make variables global
+    global doors
+    # collision code
+    door_hit_list = pygame.sprite.spritecollide(player_obj, doors, False)
+    for door in door_hit_list:
+        door.check_open()
+        if door.can_open:
+            door.open_door(curr_location, destination, destination_enemies_list)
+
+
+
 # function to ensure map wrap around to keep player on screen
 def map_wraparound():
     # if player is in map/sailing screen and they go off the edge, make them reappear on the opposite one
@@ -677,14 +790,14 @@ def map_wraparound():
 def island_collision(island, island_enemies_list):
     # make variables global
     global on_island
-    global island_rect
+    global location_rect
     global curr_enemy_list
 
     # code for collision
     map.overview = False
     island.overview = True
     on_island = True
-    island_rect = island.boundary_rect
+    location_rect = island.boundary_rect
     curr_enemy_list = island_enemies_list
 
 
@@ -697,6 +810,7 @@ def location_movement(curr_location, location_list):
     global sword_delay
     global enemies_island
     global enemies_island2
+    global enemies_dungeon_entrance
     # code for key presses + movement
     for event in pygame.event.get():  # if the user does something
         if event.type == pygame.QUIT or event.type == pygame.K_ESCAPE:  # if the user clicks close or presses escape
@@ -747,6 +861,45 @@ def pause_interaction(curr_location):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_p:
                 paused = False
+
+
+# function for key presses in peaceful location
+def peaceful_location_movement(curr_location):
+    # make variables global
+    global pause_timer
+    global done
+    # code for key presses + movement
+    for event in pygame.event.get():  # if the user does something
+        if event.type == pygame.QUIT or event.type == pygame.K_ESCAPE:  # if the user clicks close or presses escape
+            done = True
+            curr_location.overview = False
+        if event.type == pygame.KEYDOWN:  # if key is pressed, movement starts
+            if event.key == pygame.K_UP or event.key == pygame.K_w:
+                player_obj.change_y = -5
+                player_obj.last_y = -1
+                player_obj.last_x = 0
+            if event.key == pygame.K_DOWN or event.key == pygame.K_s:
+                player_obj.change_y = 5
+                player_obj.last_y = 1
+                player_obj.last_x = 0
+            if event.key == pygame.K_LEFT or event.key == pygame.K_a:
+                player_obj.change_x = -5
+                player_obj.last_y = 0
+                player_obj.last_x = -1
+            if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
+                player_obj.change_x = 5
+                player_obj.last_y = 0
+                player_obj.last_x = 1
+            if event.key == pygame.K_p:
+                pause_timer = pygame.time.get_ticks()
+                pause(curr_location)
+        if event.type == pygame.KEYUP:  # if key is released, movement stops
+            if (event.key == pygame.K_UP or event.key == pygame.K_DOWN or event.key == pygame.K_w or
+                        event.key == pygame.K_s):
+                player_obj.change_y = 0
+            if (event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT or event.key == pygame.K_a or
+                        event.key == pygame.K_d):
+                player_obj.change_x = 0
 
 
 # function for key presses while on map
@@ -801,10 +954,14 @@ chests.add(island_2_chest)
 island_spawn()
 
 # create all enemy objects for use on island 1
-island_moving_enemy_spawn(island_obj, enemies_island)
+island_moving_enemy_spawn(island_obj, enemies_island, 3)
 
 # create all enemy objects for use on island 2
-island_gun_enemy_spawn(island2_obj, enemies_island2)
+island_gun_enemy_spawn(island2_obj, enemies_island2,3 )
+
+# create all enemy objects for use in dungeon
+dungeon_enemy_spawn(dungeon_entrance_obj, enemies_dungeon_entrance, 2, 2)
+
 
 # main program loop setup
 done = False
@@ -842,15 +999,14 @@ def pause(curr_location):
 # create island function, to be in effect while on first island
 def island():
     # make variables global so they can be used
-    global pause_timer
     global treasure_message_timer
     global done
     global on_island
-    global island_rect
     global sword_draw
     global sword_delay
     global curr_enemy_list
     global treasure_message_display
+    global bullets
 
     # ensure player speed does not carry over
     player_obj.halt_speed()
@@ -873,7 +1029,7 @@ def island():
             island_chest.draw(screen)
 
         # have player attack (on island)
-        player_obj.move_close()
+        player_obj.move_close(island_obj.boundary_rect)
 
         # what happens when player spawns on island
         if on_island:
@@ -924,7 +1080,6 @@ def island2():
     global treasure_message_timer
     global done
     global on_island
-    global island_rect
     global sword_draw
     global sword_delay
     global curr_enemy_list
@@ -949,8 +1104,8 @@ def island2():
         if not enemies_island2:
             island_2_chest.draw(screen)
 
-        # have player attack (on an island)
-        player_obj.move_close()
+        # have player move (on an island)
+        player_obj.move_close(island2_obj.boundary_rect)
 
         # what happens when player spawns on island
         if on_island:
@@ -991,11 +1146,59 @@ def island2():
         screen_update()
 
 
+# create island function, for centre island
+def centre_island():
+    # make variables global so they can be used
+    global pause_timer
+    global treasure_message_timer
+    global done
+    global on_island
+    global sword_draw
+    global sword_delay
+    global curr_enemy_list
+
+    # ensure player speed does not carry over
+    player_obj.halt_speed()
+
+    # loop for island
+    while centre_island_obj.overview:
+        # code for key presses + movement
+        peaceful_location_movement(centre_island_obj)
+
+        # fill screen with background colour
+        screen.fill(SEA_BLUE)
+
+        # draw the island up close
+        centre_island_obj.draw_close(screen)
+
+        # have player move (on an island)
+        player_obj.move_close(centre_island_obj.boundary_rect)
+
+        # draw the door on the island
+        central_island_door.draw(screen)
+
+        # what happens when player spawns on island
+        if on_island:
+            land_on_island(centre_island_obj)
+
+        # check collision with door on island
+        if pygame.sprite.collide_rect(player_obj, central_island_door):
+            check_player_door_collision(centre_island_obj, dungeon_entrance_obj, enemies_dungeon_entrance)
+
+        # make player leave if exit bottom of island
+        check_leave_island(centre_island_obj)
+
+        # display player movements to screen
+        player_draw_or_move()
+
+        # update screen and framerate
+        screen_update()
+
+
 # create map function, to be used while on world map
 def world_map():
     # make variables global so they can be used
     global on_island
-    global island_rect
     global curr_enemy_list
     global pause_timer
 
@@ -1027,6 +1230,10 @@ def world_map():
         if island2_obj.off:
             leave_island(island2_obj)
 
+        # what happens when player leaves central island
+        if centre_island_obj.off:
+            leave_island(centre_island_obj)
+
         # if player is in map/sailing screen and they go off the edge, make them reappear on the opposite one
         map_wraparound()
 
@@ -1037,7 +1244,68 @@ def world_map():
         if pygame.sprite.collide_rect(player_obj, island2_obj):
             island_collision(island2_obj, enemies_island2)
 
+        if pygame.sprite.collide_rect(player_obj, centre_island_obj):
+            island_collision(centre_island_obj, enemies)
+
         # display output and framerate
+        screen_update()
+
+
+# create function for dungeon entrance
+def dungeon_entrance():
+    # make variables global so they can be used
+    global pause_timer
+    global treasure_message_timer
+    global done
+    global sword_draw
+    global sword_delay
+    global curr_enemy_list
+    global enemies_dungeon_entrance
+
+    # ensure player speed does not carry over
+    player_obj.halt_speed()
+
+    #while in dungeon entrance
+    while dungeon_entrance_obj.overview:
+
+        # code for key presses + movement
+        location_movement(dungeon_entrance_obj, enemies_dungeon_entrance)
+
+        # fill screen background
+        screen.fill(BLACK)
+
+        # draw dungeon entrance floor
+        dungeon_entrance_obj.draw(screen)
+
+        # code to remove enemies from enemies_island list, draw them to screen, and have them attack
+        enemy_draw_move(enemies_dungeon_entrance)
+
+        # have player move (within dungeon bounds)
+        player_obj.move_close(dungeon_entrance_obj)
+
+        # code to check if enemies are dead or not
+        enemy_health_check()
+
+        # display player movements to screen
+        player_draw_or_move()
+
+        # code to check if player can be hit
+        check_player_invulnerable()
+
+        # code to check if enemy can be hit
+        check_enemy_invulnerable()
+
+        # code to check collision between player and enemy
+        check_player_enemy_collision()
+
+        # code to check bullet shooting
+        if bullets:
+            draw_bullet()
+
+        # draw sword to screen
+        draw_sword(enemies_dungeon_entrance)
+
+        # update screen and framerate
         screen_update()
 
 
@@ -1052,6 +1320,12 @@ while not done:
 
     if island2_obj.overview:
         island2()
+
+    if centre_island_obj.overview:
+        centre_island()
+
+    if dungeon_entrance_obj.overview:
+        dungeon_entrance()
 
     # display output and framerate
     screen_update()
