@@ -132,7 +132,7 @@ class Dungeon():
         self.overview = False  # boolean for if dungeon level is on screen
         self.height = HEIGHT - 100
         self.width = WIDTH - 100
-        self.colour = ROCK  # stand-in colour for dunegon floor
+        self.colour = ROCK  # stand-in colour for dungeon floor
         self.image = pygame.Surface([self.width, self.height])
         self.image.fill(self.colour)
         self.rect = self.image.get_rect()
@@ -145,6 +145,7 @@ class Dungeon():
 
 # create dungeon objects
 dungeon_entrance_obj = Dungeon()
+dungeon_second_room_obj = Dungeon()
 
 
 # create dungeon door class, for use
@@ -168,18 +169,24 @@ class DungeonDoor(pygame.sprite.Sprite):
         # make variables global
         global curr_enemy_list
         global location_rect
+        global room_entry
 
         # code for collision
         curr_location.overview = False
         destination.overview = True
+        room_entry = True
         curr_enemy_list = destination_enemies_list
         location_rect = destination.rect
 
-    def check_open(self):
-        if len(player_obj.inventory) == len(islands) - 1:
-            central_island_door.can_open = True
-        else:
-            player_obj.message("You cannot open this door without the treasures...")
+    def check_open(self, curr_location):
+        if curr_location == centre_island_obj:
+            if len(player_obj.inventory) == len(islands) - 1:
+                self.can_open = True
+            else:
+                player_obj.message("You cannot open this door without the treasures...")
+        elif curr_location == dungeon_entrance_obj:
+            if not enemies_dungeon_entrance:
+                self.can_open = True
 
 
 # create map class, for use
@@ -329,8 +336,8 @@ class Bullet(pygame.sprite.Sprite):
         super().__init__()
         self.size = size
         self.colour = colour
-        self.image = pygame.Surface([self.size, self.size])
-        self.image.fill(self.colour)
+        self.image = pygame.image.load("Bullet.png").convert()
+        self.image.set_colorkey(WHITE)
         self.rect = self.image.get_rect()
         self.rect.x = start_x
         self.rect.y = start_y
@@ -339,7 +346,7 @@ class Bullet(pygame.sprite.Sprite):
         self.damage = 2  # integer for damage dealt to player health
 
     def draw(self, screen):
-        pygame.draw.rect(screen, self.colour, self.rect)
+        screen.blit(self.image, [self.rect.x, self.rect.y])
 
     def move(self):
         self.rect.x += self.x_speed
@@ -452,14 +459,18 @@ paused = False  # boolean for if the game is paused
 enemy_move_timer = 0  # timer for when enemy can calculate movement
 chests = pygame.sprite.Group()  # group for all chests in game
 enemies_dungeon_entrance = pygame.sprite.Group()
+enemies_dungeon_second_room = pygame.sprite.Group()
 curr_enemy_list = enemies  # current list for enemy collision
 treasure_message_display = False  # boolean for if treasure chest message should be displayed
 centre_island_obj.overview = True  # make sure player spawns on central island
 # create dungeon door objects
 central_island_door = DungeonDoor(centre_island_obj.position_x_close + (centre_island_obj.width / 2) - 15,
                                   centre_island_obj.position_y_close + 40)
+dungeon_entrance_door = DungeonDoor(dungeon_entrance_obj.rect.x + ((dungeon_entrance_obj.height / 2) - 15),
+                                    dungeon_entrance_obj.rect.y + 40)
 doors = pygame.sprite.Group()
 doors.add(central_island_door)
+doors.add(dungeon_entrance_door)
 
 
 # function to spawn islands on map
@@ -639,7 +650,7 @@ def enemy_draw_move(location_list):
             enemy.attack()
 
 
-def player_draw_or_move():
+def player_draw_or_die():
     # display player movements to screen
     if player_obj.health > 0:
         player_obj.draw(screen)
@@ -657,6 +668,17 @@ def land_on_island(curr_island):
     player_obj.rect.x = curr_island.position_x_close + (curr_island.width / 2) - (player_obj.size / 2)
     player_obj.halt_speed()
     on_island = False
+
+
+# function for when player enters dungeon room from bottom
+def enter_room_lower(curr_location):
+    # make variables global
+    global room_entry
+    # code to determine player location
+    player_obj.rect.y = curr_location.rect.y + (5 * (curr_location.height / 6))
+    player_obj.rect.x = curr_location.rect.x + (curr_location.width / 2) - (player_obj.size / 2)
+    player_obj.halt_speed()
+    room_entry = False
 
 
 # function to deal with attacking
@@ -767,7 +789,7 @@ def check_player_door_collision(curr_location, destination, destination_enemies_
     # collision code
     door_hit_list = pygame.sprite.spritecollide(player_obj, doors, False)
     for door in door_hit_list:
-        door.check_open()
+        door.check_open(curr_location)
         if door.can_open:
             door.open_door(curr_location, destination, destination_enemies_list)
 
@@ -1048,7 +1070,7 @@ def island():
         enemy_health_check()
 
         # function to check for player death and draw to screen
-        player_draw_or_move()
+        player_draw_or_die()
 
         # code to check if player can be hit
         check_player_invulnerable()
@@ -1124,7 +1146,7 @@ def island2():
         enemy_health_check()
 
         # display player movements to screen
-        player_draw_or_move()
+        player_draw_or_die()
 
         # code to check if player can be hit
         check_player_invulnerable()
@@ -1189,7 +1211,7 @@ def centre_island():
         check_leave_island(centre_island_obj)
 
         # display player movements to screen
-        player_draw_or_move()
+        player_draw_or_die()
 
         # update screen and framerate
         screen_update()
@@ -1261,6 +1283,7 @@ def dungeon_entrance():
     global sword_delay
     global curr_enemy_list
     global enemies_dungeon_entrance
+    global room_entry
 
     # ensure player speed does not carry over
     player_obj.halt_speed()
@@ -1286,8 +1309,12 @@ def dungeon_entrance():
         # code to check if enemies are dead or not
         enemy_health_check()
 
+        # code to check if player has entered room from bottom
+        if room_entry:
+            enter_room_lower(dungeon_entrance_obj)
+
         # display player movements to screen
-        player_draw_or_move()
+        player_draw_or_die()
 
         # code to check if player can be hit
         check_player_invulnerable()
@@ -1304,6 +1331,77 @@ def dungeon_entrance():
 
         # draw sword to screen
         draw_sword(enemies_dungeon_entrance)
+
+        # check if door can spawn
+        if not enemies_dungeon_entrance:
+            dungeon_entrance_door.draw(screen)
+
+        # check player-door collision
+        if pygame.sprite.collide_rect(player_obj, dungeon_entrance_door):
+            check_player_door_collision(dungeon_entrance_obj, dungeon_second_room_obj, enemies_dungeon_second_room)
+
+        # update screen and framerate
+        screen_update()
+
+
+# create function for dungeon entrance
+def second_dungeon_room():
+    # make variables global so they can be used
+    global pause_timer
+    global treasure_message_timer
+    global done
+    global sword_draw
+    global sword_delay
+    global curr_enemy_list
+    global enemies_dungeon_second_room
+    global room_entry
+
+    # ensure player speed does not carry over
+    player_obj.halt_speed()
+
+    # while in dungeon entrance
+    while dungeon_second_room_obj.overview:
+
+        # code for key presses + movement
+        location_movement(dungeon_second_room_obj, enemies_dungeon_second_room)
+
+        # fill screen background
+        screen.fill(BLACK)
+
+        # draw dungeon entrance floor
+        dungeon_second_room_obj.draw(screen)
+
+        # code to remove enemies from enemies_island list, draw them to screen, and have them attack
+        enemy_draw_move(enemies_dungeon_second_room)
+
+        # have player move (within dungeon bounds)
+        player_obj.move_close(dungeon_second_room_obj)
+
+        # code to check if enemies are dead or not
+        enemy_health_check()
+
+        # code to check if player has entered room from bottom
+        if room_entry:
+            enter_room_lower(dungeon_second_room_obj)
+
+        # display player movements to screen
+        player_draw_or_die()
+
+        # code to check if player can be hit
+        check_player_invulnerable()
+
+        # code to check if enemy can be hit
+        check_enemy_invulnerable()
+
+        # code to check collision between player and enemy
+        check_player_enemy_collision()
+
+        # code to check bullet shooting
+        if bullets:
+            draw_bullet()
+
+        # draw sword to screen
+        draw_sword(enemies_dungeon_second_room)
 
         # update screen and framerate
         screen_update()
@@ -1326,6 +1424,9 @@ while not done:
 
     if dungeon_entrance_obj.overview:
         dungeon_entrance()
+
+    if dungeon_second_room_obj.overview:
+        second_dungeon_room()
 
     # display output and framerate
     screen_update()
