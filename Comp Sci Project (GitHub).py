@@ -80,6 +80,11 @@ class Player(pygame.sprite.Sprite):
         player_obj.change_y = 0
         player_obj.change_x = 0
 
+    def draw_player_health(self, screen):
+        pygame.draw.rect (screen, BLACK, [WIDTH - 50, 0, 50, HEIGHT])
+        for hp in range(self.health):
+            pygame.draw.rect(screen, RED, [WIDTH - 40, (20 + hp * 50), 30, 30])
+
 
 # initialise player object
 player_obj = Player(350, 250, 20)
@@ -212,7 +217,7 @@ class MovingEnemy(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = start_x  # enemy x position
         self.rect.y = start_y  # enemy y position
-        self.health = 1  # integer for health value, each hit does damage of 1
+        self.health = 2  # integer for health value, each hit does damage of 2
         # self.dead = False  # boolean for if enemy is dead or not
         self.damage = 1  # boolean for damage enemy does to player health
         self.invulnerable = False  # boolean for if enemy can take damage or not
@@ -295,7 +300,7 @@ class GunEnemy(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = start_x  # enemy x position
         self.rect.y = start_y  # enemy y position
-        self.health = 2  # integer for health value, each hit does damage of 1
+        self.health = 2  # integer for health value, each hit does damage of 2
         # self.dead = False  # boolean for if enemy is dead or not
         self.invulnerable = False  # boolean for if enemy can be hit
         self.invulnerable_timer = pygame.time.get_ticks()  # sets the current time as reference for invincibility
@@ -307,6 +312,7 @@ class GunEnemy(pygame.sprite.Sprite):
     def attack(self):
         # make variables global
         global screen
+        global bullets
         # check enemy can attack
         if pygame.time.get_ticks() - self.attack_timer >= 2000:
             self.can_attack = True
@@ -343,7 +349,8 @@ class Bullet(pygame.sprite.Sprite):
         self.rect.y = start_y
         self.x_speed = x_speed
         self.y_speed = y_speed
-        self.damage = 2  # integer for damage dealt to player health
+        self.damage = 1  # integer for damage dealt to player health
+        self.deflected = False # boolean for if it has been deflected by player sword
 
     def draw(self, screen):
         screen.blit(self.image, [self.rect.x, self.rect.y])
@@ -400,11 +407,13 @@ class Sword(pygame.sprite.Sprite):
         # make variables global
         global enemies_island
         global enemies_island2
+        global enemies_dungeon_second_room
+        global enemies_dungeon_entrance
         # create list of enemies hit by player sword
         enemies_hit_list = pygame.sprite.spritecollide(self, enemy_list, False)
         for enemy in enemies_hit_list:
             if not enemy.invulnerable:
-                enemy.health -= 1
+                enemy.health -= 2
                 enemy.invulnerable = True
                 enemies_hit.add(enemy)
 
@@ -454,6 +463,7 @@ enemies_hit = pygame.sprite.Group()  # create list of enemies hit by sword
 sword_draw = False  # boolean for if sword should be drawn
 swords = pygame.sprite.Group()  # create list of swords
 bullets = pygame.sprite.Group()  # create list of bullets
+bullets_deflected = pygame.sprite.Group()
 font = pygame.font.SysFont('Arial Black', 18, True, False)  # created font for use in player messages
 paused = False  # boolean for if the game is paused
 enemy_move_timer = 0  # timer for when enemy can calculate movement
@@ -466,12 +476,20 @@ centre_island_obj.overview = True  # make sure player spawns on central island
 # create dungeon door objects
 central_island_door = DungeonDoor(centre_island_obj.position_x_close + (centre_island_obj.width / 2) - 15,
                                   centre_island_obj.position_y_close + 40)
-dungeon_entrance_door = DungeonDoor(dungeon_entrance_obj.rect.x + ((dungeon_entrance_obj.height / 2) - 15),
+dungeon_entrance_door = DungeonDoor(dungeon_entrance_obj.rect.x + ((dungeon_entrance_obj.width / 2) - 15),
                                     dungeon_entrance_obj.rect.y + 40)
 doors = pygame.sprite.Group()
 doors.add(central_island_door)
 doors.add(dungeon_entrance_door)
 
+# create list of all game locations
+# locations = pygame.sprite.Group()
+# locations.add(island_obj)
+# locations.add(island2_obj)
+# locations.add(centre_island_obj)
+# locations.add(dungeon_entrance_obj)
+# locations.add(dungeon_second_room_obj)
+# locations.add(map)
 
 # function to spawn islands on map
 def island_spawn():
@@ -618,6 +636,7 @@ def draw_sword(location_list):
 def draw_bullet():
     # make variables global
     global screen
+    global bullets
     # iterate through list of bullets, and either draw and move, or remove from list
     for bullet_shot in bullets:
         if ((bullet_shot.rect.x < WIDTH and bullet_shot.rect.x > 0 - bullet_shot.size) and
@@ -654,6 +673,7 @@ def player_draw_or_die():
     # display player movements to screen
     if player_obj.health > 0:
         player_obj.draw(screen)
+        player_obj.draw_player_health(screen)
     else:
         # display death message upon failure
         player_obj.message("You died! Press ESC to quit.")
@@ -748,22 +768,27 @@ def check_treasure_message(curr_location, curr_chest):
 # function to check if player can be hit
 def check_player_invulnerable():
     # check invulnerability timer has not run out
-    if pygame.time.get_ticks() - player_obj.invulnerable_timer >= 2000:
+    if pygame.time.get_ticks() - player_obj.invulnerable_timer >= 1000:
         player_obj.invulnerable = False
 
 
 # function to check if enemy can be hit
 def check_enemy_invulnerable():
     for enemy in enemies_hit:
-        if pygame.time.get_ticks() - enemy.invulnerable_timer >= 1000:
+        if pygame.time.get_ticks() - enemy.invulnerable_timer >= 500:
             enemy.invulnerable = False
             enemies_hit.remove(enemy)
 
 
 # function to check for collision between player and enemy
-def check_player_enemy_collision():
+def check_player_enemy_collision(curr_enemy_list):
+    # make variables global
+    global enemies_island
+    global enemies_island2
+    global enemies_dungeon_second_room
+    global enemies_dungeon_entrance
     # code to check collision between player and enemy
-    enemy_damage_list = pygame.sprite.spritecollide(player_obj, enemies, False)
+    enemy_damage_list = pygame.sprite.spritecollide(player_obj, curr_enemy_list, False)
     for enemy in enemy_damage_list:
         if not player_obj.invulnerable:
             player_obj.take_damage(enemy)
@@ -771,8 +796,46 @@ def check_player_enemy_collision():
             player_obj.invulnerable_timer = pygame.time.get_ticks()
 
 
+# function to check for collision between bullets and sword
+def check_sword_bullet_collision():
+    # make variables global
+    global bullets
+    # code to check collision between sword and bullets
+    bullet_collision_list = pygame.sprite.spritecollide(sword_obj, bullets, False)
+    for bullet_deflected in bullet_collision_list:
+        if abs(bullet_deflected.x_speed) > abs(bullet_deflected.y_speed):
+            bullet_deflected.x_speed *= -1
+        else:
+            bullet_deflected.y_speed *= -1
+
+
+# function to check for collision between bullets and enemies
+def check_bullet_enemy_collision(curr_enemy_list):
+    # make variables global
+    global bullets
+    global bullets_deflected
+    global enemies_dungeon_second_room
+    global enemies_dungeon_entrance
+    global enemies_island
+    global enemies_island2
+    # code to check collision between bullet and enemies
+    for bullet_shot in bullets:
+        if bullet_shot.deflected:
+            bullets_deflected.add(bullet_shot)
+    for enemy in curr_enemy_list:
+        bullet_collision_list = pygame.sprite.spritecollide(enemy, bullets_deflected, False)
+        if bullet_collision_list:
+            enemy.health -= 1
+    for bullet_remove in bullets_deflected:
+        bullet_remove.kill()
+    bullets_deflected.empty()
+
+
+
 # function to check for collision between player and bullets
 def check_player_bullet_collision():
+    # make variables global
+    global bullets
     # code to check collision between player and bullets
     bullet_hit_list = pygame.sprite.spritecollide(player_obj, bullets, True)
     for bullet_hit in bullet_hit_list:
@@ -1029,6 +1092,7 @@ def island():
     global curr_enemy_list
     global treasure_message_display
     global bullets
+    global enemies_island
 
     # ensure player speed does not carry over
     player_obj.halt_speed()
@@ -1079,7 +1143,15 @@ def island():
         check_enemy_invulnerable()
 
         # code to check collision between player and enemy
-        check_player_enemy_collision()
+        check_player_enemy_collision(enemies_island)
+
+        # code to check collision between bullet and sword
+        if sword_draw:
+            # check sword-bullet collision
+            check_sword_bullet_collision()
+
+        # code to check collision between bullet and enemy
+        check_bullet_enemy_collision(enemies_island)
 
         # code to check collision between player and bullet
         check_player_bullet_collision()
@@ -1105,6 +1177,8 @@ def island2():
     global sword_draw
     global sword_delay
     global curr_enemy_list
+    global bullets
+    global enemies_island2
 
     # ensure player speed does not carry over
     player_obj.halt_speed()
@@ -1155,7 +1229,18 @@ def island2():
         check_enemy_invulnerable()
 
         # code to check collision between player and enemy
-        check_player_enemy_collision()
+        check_player_enemy_collision(enemies_island2)
+
+        # code to check collision between bullet and sword
+        if sword_draw:
+            # check sword-bullet collision
+            check_sword_bullet_collision()
+
+        # code to check collision between bullet and enemy
+        check_bullet_enemy_collision(enemies_island2)
+
+        # code to check collision between player and bullet
+        check_player_bullet_collision()
 
         # code to check bullet shooting
         if bullets:
@@ -1284,6 +1369,7 @@ def dungeon_entrance():
     global curr_enemy_list
     global enemies_dungeon_entrance
     global room_entry
+    global bullets
 
     # ensure player speed does not carry over
     player_obj.halt_speed()
@@ -1323,7 +1409,18 @@ def dungeon_entrance():
         check_enemy_invulnerable()
 
         # code to check collision between player and enemy
-        check_player_enemy_collision()
+        check_player_enemy_collision(enemies_dungeon_entrance)
+
+        # code to check collision between bullet and sword
+        if sword_draw:
+            # check sword-bullet collision
+            check_sword_bullet_collision()
+
+        # code to check collision between bullet and enemy
+        check_bullet_enemy_collision(enemies_dungeon_entrance)
+
+        # code to check collision between player and bullet
+        check_player_bullet_collision()
 
         # code to check bullet shooting
         if bullets:
@@ -1335,10 +1432,9 @@ def dungeon_entrance():
         # check if door can spawn
         if not enemies_dungeon_entrance:
             dungeon_entrance_door.draw(screen)
-
-        # check player-door collision
-        if pygame.sprite.collide_rect(player_obj, dungeon_entrance_door):
-            check_player_door_collision(dungeon_entrance_obj, dungeon_second_room_obj, enemies_dungeon_second_room)
+            # check player-door collision
+            if pygame.sprite.collide_rect(player_obj, dungeon_entrance_door):
+                check_player_door_collision(dungeon_entrance_obj, dungeon_second_room_obj, enemies_dungeon_second_room)
 
         # update screen and framerate
         screen_update()
@@ -1355,6 +1451,7 @@ def second_dungeon_room():
     global curr_enemy_list
     global enemies_dungeon_second_room
     global room_entry
+    global bullets
 
     # ensure player speed does not carry over
     player_obj.halt_speed()
@@ -1394,7 +1491,18 @@ def second_dungeon_room():
         check_enemy_invulnerable()
 
         # code to check collision between player and enemy
-        check_player_enemy_collision()
+        check_player_enemy_collision(enemies_dungeon_second_room)
+
+        # code to check collision between bullet and sword
+        if sword_draw:
+            # check sword-bullet collision
+            check_sword_bullet_collision()
+
+        # code to check collision between bullet and enemy
+        check_bullet_enemy_collision(enemies_dungeon_second_room)
+
+        # code to check collision between player and bullet
+        check_player_bullet_collision()
 
         # code to check bullet shooting
         if bullets:
@@ -1409,7 +1517,7 @@ def second_dungeon_room():
 
 # main program loop
 while not done:
-    # functions for different areas
+    # if in an area, activate its' function for overview
     if map.overview:
         world_map()
 
