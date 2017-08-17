@@ -445,6 +445,10 @@ class TreasureChest(pygame.sprite.Sprite):
     def draw(self, screen):
         screen.blit(self.image, [self.rect.x, self.rect.y])
 
+    def end_game(self):
+        if pygame.sprite.collide_rect(player_obj, self):
+            player_obj.message("Well done! You have finished the game. Press ESC to quit.")
+
 
 # miscellaneous values
 map.overview = True  # boolean for when player is in map
@@ -687,6 +691,7 @@ def land_on_island(curr_island):
     player_obj.rect.y = curr_island.position_y_close + (4 * (curr_island.height / 5))
     player_obj.rect.x = curr_island.position_x_close + (curr_island.width / 2) - (player_obj.size / 2)
     player_obj.halt_speed()
+    player_obj.invulnerable_timer = pygame.time.get_ticks()
     on_island = False
 
 
@@ -698,6 +703,7 @@ def enter_room_lower(curr_location):
     player_obj.rect.y = curr_location.rect.y + (5 * (curr_location.height / 6))
     player_obj.rect.x = curr_location.rect.x + (curr_location.width / 2) - (player_obj.size / 2)
     player_obj.halt_speed()
+    player_obj.invulnerable_timer = pygame.time.get_ticks()
     room_entry = False
 
 
@@ -801,34 +807,34 @@ def check_sword_bullet_collision():
     # make variables global
     global bullets
     # code to check collision between sword and bullets
-    bullet_collision_list = pygame.sprite.spritecollide(sword_obj, bullets, False)
-    for bullet_deflected in bullet_collision_list:
-        if abs(bullet_deflected.x_speed) > abs(bullet_deflected.y_speed):
-            bullet_deflected.x_speed *= -1
-        else:
-            bullet_deflected.y_speed *= -1
+    pygame.sprite.spritecollide(sword_obj, bullets, True)
+    # for bullet_deflected in bullet_collision_list:
+    #     if abs(bullet_deflected.x_speed) > abs(bullet_deflected.y_speed):
+    #         bullet_deflected.x_speed *= -1
+    #     else:
+    #         bullet_deflected.y_speed *= -1
 
 
-# function to check for collision between bullets and enemies
-def check_bullet_enemy_collision(curr_enemy_list):
-    # make variables global
-    global bullets
-    global bullets_deflected
-    global enemies_dungeon_second_room
-    global enemies_dungeon_entrance
-    global enemies_island
-    global enemies_island2
-    # code to check collision between bullet and enemies
-    for bullet_shot in bullets:
-        if bullet_shot.deflected:
-            bullets_deflected.add(bullet_shot)
-    for enemy in curr_enemy_list:
-        bullet_collision_list = pygame.sprite.spritecollide(enemy, bullets_deflected, False)
-        if bullet_collision_list:
-            enemy.health -= 1
-    for bullet_remove in bullets_deflected:
-        bullet_remove.kill()
-    bullets_deflected.empty()
+# # function to check for collision between bullets and enemies
+# def check_bullet_enemy_collision(curr_enemy_list):
+#     # make variables global
+#     global bullets
+#     global bullets_deflected
+#     global enemies_dungeon_second_room
+#     global enemies_dungeon_entrance
+#     global enemies_island
+#     global enemies_island2
+#     # code to check collision between bullet and enemies
+#     for bullet_shot in bullets:
+#         if bullet_shot.deflected:
+#             bullets_deflected.add(bullet_shot)
+#     for enemy in curr_enemy_list:
+#         bullet_collision_list = pygame.sprite.spritecollide(enemy, bullets_deflected, False)
+#         if bullet_collision_list:
+#             enemy.health -= 1
+#     for bullet_remove in bullet_collision_list:
+#         bullet_remove.kill()
+#     bullets_deflected.empty()
 
 
 
@@ -1034,6 +1040,8 @@ chests.add(island_chest)
 island_2_chest = TreasureChest(40, island2_obj.position_x_close + (island2_obj.width / 2) - 20,
                                island2_obj.position_y_close + 40 - 20, "Sword of Awesome")
 chests.add(island_2_chest)
+end_chest = TreasureChest(40, (WIDTH / 2) - 20, (HEIGHT / 2) - 20, "Ultimate pirate treasure")
+chests.add(end_chest)
 
 # assign island spawn locations
 island_spawn()
@@ -1044,8 +1052,11 @@ island_moving_enemy_spawn(island_obj, enemies_island, 3)
 # create all enemy objects for use on island 2
 island_gun_enemy_spawn(island2_obj, enemies_island2,3 )
 
-# create all enemy objects for use in dungeon
+# create all enemy objects for use in dungeon entrance
 dungeon_enemy_spawn(dungeon_entrance_obj, enemies_dungeon_entrance, 2, 2)
+
+# create all enemy objects for use in dungeon second room
+dungeon_enemy_spawn(dungeon_second_room_obj, enemies_dungeon_second_room, 2, 4)
 
 
 # main program loop setup
@@ -1151,7 +1162,7 @@ def island():
             check_sword_bullet_collision()
 
         # code to check collision between bullet and enemy
-        check_bullet_enemy_collision(enemies_island)
+        # check_bullet_enemy_collision(enemies_island)
 
         # code to check collision between player and bullet
         check_player_bullet_collision()
@@ -1237,7 +1248,7 @@ def island2():
             check_sword_bullet_collision()
 
         # code to check collision between bullet and enemy
-        check_bullet_enemy_collision(enemies_island2)
+        # check_bullet_enemy_collision(enemies_island2)
 
         # code to check collision between player and bullet
         check_player_bullet_collision()
@@ -1386,7 +1397,7 @@ def dungeon_entrance():
         # draw dungeon entrance floor
         dungeon_entrance_obj.draw(screen)
 
-        # code to remove enemies from enemies_island list, draw them to screen, and have them attack
+        # code to draw enemies to screen
         enemy_draw_move(enemies_dungeon_entrance)
 
         # have player move (within dungeon bounds)
@@ -1417,7 +1428,7 @@ def dungeon_entrance():
             check_sword_bullet_collision()
 
         # code to check collision between bullet and enemy
-        check_bullet_enemy_collision(enemies_dungeon_entrance)
+        # check_bullet_enemy_collision(enemies_dungeon_entrance)
 
         # code to check collision between player and bullet
         check_player_bullet_collision()
@@ -1468,7 +1479,7 @@ def second_dungeon_room():
         # draw dungeon entrance floor
         dungeon_second_room_obj.draw(screen)
 
-        # code to remove enemies from enemies_island list, draw them to screen, and have them attack
+        # code to draw enemies to screen
         enemy_draw_move(enemies_dungeon_second_room)
 
         # have player move (within dungeon bounds)
@@ -1499,7 +1510,7 @@ def second_dungeon_room():
             check_sword_bullet_collision()
 
         # code to check collision between bullet and enemy
-        check_bullet_enemy_collision(enemies_dungeon_second_room)
+        # check_bullet_enemy_collision(enemies_dungeon_second_room)
 
         # code to check collision between player and bullet
         check_player_bullet_collision()
@@ -1510,6 +1521,11 @@ def second_dungeon_room():
 
         # draw sword to screen
         draw_sword(enemies_dungeon_second_room)
+
+        # check all enemies are dead, and display dungeon treasure (end of game)
+        if not enemies_dungeon_second_room:
+            end_chest.draw(screen)
+            end_chest.end_game()
 
         # update screen and framerate
         screen_update()
