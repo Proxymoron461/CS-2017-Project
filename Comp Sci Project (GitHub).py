@@ -45,6 +45,9 @@ class Player(pygame.sprite.Sprite):
         self.image = pygame.Surface([self.size, self.size])
         self.image.fill(self.colour)
         self.rect = self.image.get_rect()
+        self.health_image = pygame.image.load("Health.png").convert()
+        self.health_image.set_colorkey(WHITE)
+        self.health_rect = self.image.get_rect()
         self.rect.x = start_x  # player x position
         self.rect.y = start_y  # player y position
         self.enemies_killed = 0
@@ -73,7 +76,7 @@ class Player(pygame.sprite.Sprite):
 
     def message(self, text):
         output_text = font.render(text, True, WHITE)
-        pygame.draw.rect(screen, BLACK, [0, 0, 700, 50])
+        pygame.draw.rect(screen, BLACK, [0, 0, WIDTH - 50, 50])
         screen.blit(output_text, [20, 10])
 
     def halt_speed(self):
@@ -81,9 +84,10 @@ class Player(pygame.sprite.Sprite):
         player_obj.change_x = 0
 
     def draw_player_health(self, screen):
-        pygame.draw.rect (screen, BLACK, [WIDTH - 50, 0, 50, HEIGHT])
+        # pygame.draw.rect (screen, BLACK, [WIDTH - 50, 0, 50, HEIGHT])
         for hp in range(self.health):
-            pygame.draw.rect(screen, RED, [WIDTH - 40, (20 + hp * 50), 30, 30])
+            screen.blit(self.health_image, [WIDTH - 40, (20 + hp * 35)])
+            # pygame.draw.rect(screen, RED, [WIDTH - 40, (20 + hp * 50), 30, 30])
 
 
 # initialise player object
@@ -110,8 +114,6 @@ class Island(pygame.sprite.Sprite):
                            self.width]  # rectangle for displaying island up close
         self.boundary_rect = [self.position_x_close + 5, self.position_y_close + 5, self.height - 10,
                               self.width - 10]  # rectangle for keeping player in island
-        # self.grid = [[0 for x in range(width // 10)] for y in range(height // 10)]
-        # self.grid_margin = 10
         self.overview = False
         self.off = False  # boolean to check if player has left island
         self.chest_open = False  # boolean to check if island chest is open
@@ -122,13 +124,6 @@ class Island(pygame.sprite.Sprite):
 
     def draw_map(self, screen):
         pygame.draw.rect(screen, self.colour, self.rect)
-
-        # def find_player(self):
-        #     self.player_x = (player_obj.rect.x - self.position_x_close)
-        #     self.player_y = (player_obj.rect.y - self.position_y_close)
-        #     self.grid_player_x = self.player_x // self.grid_margin
-        #     self.grid_player_y = self.player_y // self.grid_margin
-        #     return [self.grid_player_x, self.grid_player_y]
 
 
 # create dungeon class, for use
@@ -192,6 +187,8 @@ class DungeonDoor(pygame.sprite.Sprite):
         elif curr_location == dungeon_entrance_obj:
             if not enemies_dungeon_entrance:
                 self.can_open = True
+        else:
+            self.can_open = True
 
 
 # create map class, for use
@@ -508,8 +505,8 @@ def island_spawn():
             index_y = random.choice(y_position_list)
             island.rect.x = index_x
             island.rect.y = index_y
-            if not pygame.sprite.spritecollideany(island, islands) and not pygame.sprite.collide_rect(island,
-                                                                                                      centre_island_obj):
+            if not (pygame.sprite.spritecollideany(island, islands) or pygame.sprite.collide_circle(island,
+                                                                                                    centre_island_obj)):
                 island.island_location = True
                 islands.add(island)
                 x_position_list.remove(index_x)
@@ -676,8 +673,8 @@ def enemy_draw_move(location_list):
 def player_draw_or_die():
     # display player movements to screen
     if player_obj.health > 0:
-        player_obj.draw(screen)
         player_obj.draw_player_health(screen)
+        player_obj.draw(screen)
     else:
         # display death message upon failure
         player_obj.message("You died! Press ESC to quit.")
@@ -1385,7 +1382,7 @@ def dungeon_entrance():
     # ensure player speed does not carry over
     player_obj.halt_speed()
 
-    #while in dungeon entrance
+    # while in dungeon entrance
     while dungeon_entrance_obj.overview:
 
         # code for key presses + movement
