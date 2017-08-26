@@ -105,7 +105,7 @@ class Player(pygame.sprite.Sprite):
 
 
 # initialise player object
-player_obj = Player(350, 250, 20)
+player_obj = Player(350, 250, 15)
 
 
 # initialise island class
@@ -389,9 +389,10 @@ class BreakObject(pygame.sprite.Sprite):
 
 # initialise sword class, for attacking
 class Sword(pygame.sprite.Sprite):
-    def __init__(self, size):
+    def __init__(self):
         super().__init__()
-        self.size = size
+        self.width = 7
+        self.height = 15
         # self.colour = BLACK
         # load pygame image sprite
         self.image = pygame.image.load("Sword.png").convert()
@@ -415,20 +416,20 @@ class Sword(pygame.sprite.Sprite):
             self.rect.x = player_obj.rect.x + player_obj.size
             self.curr_image = self.image_right
         elif player_obj.last_x < 0:
-            self.rect.x = player_obj.rect.x - self.size
+            self.rect.x = player_obj.rect.x - self.height
             self.curr_image = self.image_left
         elif player_obj.last_x == 0:
-            self.rect.x = player_obj.rect.x + (player_obj.size / 2) - (self.size / 2)
+            self.rect.x = player_obj.rect.x + (player_obj.size / 2) - (self.width / 2)
 
         # code to put rectangle y value at area where character is facing
         if player_obj.last_y > 0:
             self.rect.y = player_obj.rect.y + player_obj.size
             self.curr_image = self.image_down
         elif player_obj.last_y < 0:
-            self.rect.y = player_obj.rect.y - self.size
+            self.rect.y = player_obj.rect.y - self.height
             self.curr_image = self.image_up
         elif player_obj.last_y == 0:
-            self.rect.y = player_obj.rect.y + (player_obj.size / 2) - (self.size / 2)
+            self.rect.y = player_obj.rect.y + (player_obj.size / 2) - (self.width / 2)
 
     def attack_collision(self, enemy_list):
         # make variables global
@@ -452,7 +453,7 @@ class Sword(pygame.sprite.Sprite):
 
 
 # create sword object, for use during the game
-sword_obj = Sword(15)
+sword_obj = Sword()
 
 
 # initialise treasure chest class
@@ -463,6 +464,8 @@ class TreasureChest(pygame.sprite.Sprite):
         self.image = pygame.image.load("Chest.png").convert()
         self.image.set_colorkey(WHITE)
         self.rect = self.image.get_rect()
+        self.open_image = pygame.image.load("ChestOpen.png").convert()
+        self.open_image.set_colorkey(WHITE)
         self.rect.x = position_x
         self.rect.y = position_y
         self.treasure = treasure
@@ -470,6 +473,7 @@ class TreasureChest(pygame.sprite.Sprite):
         self.game_end = False  # boolean for if game is ended
 
     def pick_treasure(self):
+        self.image = self.open_image
         player_obj.message(self.text)
         player_obj.inventory.append(self.treasure)
 
@@ -477,7 +481,9 @@ class TreasureChest(pygame.sprite.Sprite):
         screen.blit(self.image, [self.rect.x, self.rect.y])
 
     def check_end_game(self, curr_location):
+        # make variables global
         global game_end
+        # code to check if game is finished
         if pygame.sprite.collide_rect(player_obj, self):
             game_end = True
             curr_location.overview = False
@@ -486,8 +492,8 @@ class TreasureChest(pygame.sprite.Sprite):
 # miscellaneous values
 map.overview = True  # boolean for when player is in map
 on_island = False  # boolean for when player gets onto island
-island_obj = Island(300, 300, 0, 0)
-island2_obj = Island(300, 300, 0, 0)
+island_obj = Island(300, 300, 0, 0)  # create first island object
+island2_obj = Island(300, 300, 0, 0)  # create second island object
 centre_island_obj = Island(400, 400, ((WIDTH / 2) - 50), ((HEIGHT / 2) - 50))
 islands = pygame.sprite.Group()  # initialise list of islands
 islands.add(island_obj)  # add first island object to list of islands
@@ -512,7 +518,7 @@ curr_enemy_list = enemies  # current list for enemy collision
 treasure_message_display = False  # boolean for if treasure chest message should be displayed
 centre_island_obj.overview = True  # make sure player spawns on central island
 game_end = False  # boolean to check if game is done or not
-# create dungeon door objects
+# create dungeon door objects and list
 central_island_door = DungeonDoor(centre_island_obj.position_x_close + (centre_island_obj.width / 2) - 15,
                                   centre_island_obj.position_y_close + 40)
 dungeon_entrance_door = DungeonDoor(dungeon_entrance_obj.rect.x + ((dungeon_entrance_obj.width / 2) - 15),
@@ -543,8 +549,8 @@ def island_spawn():
             index_y = random.choice(y_position_list)
             island.rect.x = index_x
             island.rect.y = index_y
-            if not (pygame.sprite.spritecollideany(island, islands) or pygame.sprite.collide_circle(island,
-                                                                                                    centre_island_obj)):
+            if not (pygame.sprite.spritecollideany(island, islands, pygame.sprite.collide_circle) or 
+                                                            pygame.sprite.collide_circle(island, centre_island_obj)):
                 island.island_location = True
                 islands.add(island)
                 x_position_list.remove(index_x)
