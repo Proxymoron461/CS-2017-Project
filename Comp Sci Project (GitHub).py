@@ -31,7 +31,7 @@ pygame.init()
 # setting the borderless window
 size = (WIDTH, HEIGHT)
 screen = pygame.display.set_mode(size)
-pygame.display.set_caption("Comp Sci Project")  # sets the window title
+pygame.display.set_caption("Pirate Game")  # sets the window title
 
 
 # initialise player class, using rectangle for now
@@ -371,6 +371,22 @@ class Bullet(pygame.sprite.Sprite):
         self.rect.y += self.y_speed
 
 
+# create class of breakable objects
+class BreakObject(pygame.sprite.Sprite):
+    def __init__(self, size, x_position, y_position):
+        super().__init__()
+        self.size = size
+        self.colour = BROWN
+        self.image = pygame.Surface([self.size, self.size])
+        self.image.fill(self.colour)
+        self.rect = self.image.get_rect()
+        self.rect.x = x_position
+        self.rect.y = y_position
+    def draw(self):
+        if not self.broken:
+            pygame.draw.rect(screen, self.colour, self.rect)
+
+
 # initialise sword class, for attacking
 class Sword(pygame.sprite.Sprite):
     def __init__(self, size):
@@ -428,6 +444,12 @@ class Sword(pygame.sprite.Sprite):
                 enemy.invulnerable = True
                 enemies_hit.add(enemy)
 
+    def check_break(self):
+        # make variables global
+        global breakables
+        # create list of objects broken by player sword
+        items_hit_list = pygame.sprite.spritecollide(self, breakables, True)
+
 
 # create sword object, for use during the game
 sword_obj = Sword(15)
@@ -437,7 +459,6 @@ sword_obj = Sword(15)
 class TreasureChest(pygame.sprite.Sprite):
     def __init__(self, size, position_x, position_y, treasure):
         super().__init__()
-        self.colour = BROWN
         self.size = size
         self.image = pygame.image.load("Chest.png").convert()
         self.image.set_colorkey(WHITE)
@@ -476,6 +497,7 @@ enemies_island2 = pygame.sprite.Group()  # create list of enemies for island 2
 enemies_island = pygame.sprite.Group()  # create list of enemies for island 1
 enemies_dungeon = pygame.sprite.Group()  # create list of enemies for dungeon
 enemies_hit = pygame.sprite.Group()  # create list of enemies hit by sword
+breakables = pygame.sprite.Group()  # create list of breakable items
 sword_draw = False  # boolean for if sword should be drawn
 swords = pygame.sprite.Group()  # create list of swords
 bullets = pygame.sprite.Group()  # create list of bullets
@@ -649,11 +671,13 @@ def screen_update():
 def draw_sword(location_list):
     # make variables global
     global sword_draw
+    global breakables
     # code to determine if sword is drawn to screen
     if sword_draw:
         if player_obj.change_x == 0 and player_obj.change_y == 0 and player_obj.health > 0:
             sword_obj.draw(screen)
             sword_obj.attack_collision(location_list)
+            sword_obj.check_break()
         else:
             sword_draw = False
         if pygame.time.get_ticks() - sword_delay >= 700:
@@ -737,6 +761,7 @@ def sword_attack(location_list):
     sword_draw = True
     sword_obj.attack()
     sword_obj.attack_collision(location_list)
+    sword_obj.check_break()
     sword_delay = pygame.time.get_ticks()  # amount of milliseconds before sword sprite disappears
 
 
@@ -820,7 +845,6 @@ def check_player_enemy_collision(curr_enemy_list):
             player_obj.draw_health = False
             player_obj.health_flicker_timer = pygame.time.get_ticks()
             player_obj.invulnerable_timer = pygame.time.get_ticks()
-
 
 
 # function to check for collision between bullets and sword
@@ -1039,11 +1063,11 @@ def map_movement():
 
 # create chest objects and add them to chests list
 island_chest = TreasureChest(40, island_obj.position_x_close + (island_obj.width / 2) - 20,
-                             island_obj.position_y_close + 40 - 20, "Shield of Litness")
+                             island_obj.position_y_close + 40 - 20, "Goblet of Blackbeard")
 chests.add(island_chest)
 
 island_2_chest = TreasureChest(40, island2_obj.position_x_close + (island2_obj.width / 2) - 20,
-                               island2_obj.position_y_close + 40 - 20, "Sword of Awesome")
+                               island2_obj.position_y_close + 40 - 20, "Coin of Avery")
 chests.add(island_2_chest)
 end_chest = TreasureChest(40, (WIDTH / 2) - 20, (HEIGHT / 2) - 20, "Ultimate pirate treasure")
 chests.add(end_chest)
