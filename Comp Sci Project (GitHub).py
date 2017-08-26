@@ -57,7 +57,9 @@ class Player(pygame.sprite.Sprite):
         self.max_health = 5  # integer for maximum player health
         self.invulnerable = False  # boolean for if player is invulnerable or not
         self.invulnerable_timer = pygame.time.get_ticks()  # create reference timer for invulnerability period
-        self.inventory = []  # empty list for use in inventory
+        self.health_flicker_timer = pygame.time.get_ticks() # create reference timer for health flicker
+        self.inventory = []  # empty list for use as inventory
+        self.draw_health = True # boolean to check if health should be drawn
 
     def move_map(self):
         self.rect.x += self.change_x
@@ -84,10 +86,22 @@ class Player(pygame.sprite.Sprite):
         player_obj.change_x = 0
 
     def draw_player_health(self, screen):
-        # pygame.draw.rect (screen, BLACK, [WIDTH - 50, 0, 50, HEIGHT])
-        for hp in range(self.health):
-            screen.blit(self.health_image, [WIDTH - 40, (20 + hp * 35)])
-            # pygame.draw.rect(screen, RED, [WIDTH - 40, (20 + hp * 50), 30, 30])
+        if self.draw_health:
+            for hp in range(self.health):
+                screen.blit(self.health_image, [WIDTH - 40, (20 + hp * 35)])
+
+    def health_invulnerable_flicker(self, screen):
+        # code to make health timer flicker
+        if self.invulnerable:
+            if (pygame.time.get_ticks() - self.health_flicker_timer) > 300:
+                if self.draw_health:
+                    self.draw_health = False
+                    self.health_flicker_timer = pygame.time.get_ticks()
+                else:
+                    self.draw_health = True
+                    self.health_flicker_timer = pygame.time.get_ticks()
+        else:
+            self.draw_health = True
 
 
 # initialise player object
@@ -425,8 +439,6 @@ class TreasureChest(pygame.sprite.Sprite):
         super().__init__()
         self.colour = BROWN
         self.size = size
-        # self.image = pygame.Surface([self.size, self.size])
-        # self.image.fill(self.colour)
         self.image = pygame.image.load("Chest.png").convert()
         self.image.set_colorkey(WHITE)
         self.rect = self.image.get_rect()
@@ -434,6 +446,7 @@ class TreasureChest(pygame.sprite.Sprite):
         self.rect.y = position_y
         self.treasure = treasure
         self.text = "Congratulations! You found the " + self.treasure + "!"
+        self.game_end = False  # boolean for if game is ended
 
     def pick_treasure(self):
         player_obj.message(self.text)
@@ -442,9 +455,11 @@ class TreasureChest(pygame.sprite.Sprite):
     def draw(self, screen):
         screen.blit(self.image, [self.rect.x, self.rect.y])
 
-    def end_game(self):
+    def check_end_game(self, curr_location):
+        global game_end
         if pygame.sprite.collide_rect(player_obj, self):
-            player_obj.message("Well done! You have finished the game. Press ESC to quit.")
+            game_end = True
+            curr_location.overview = False
 
 
 # miscellaneous values
@@ -474,6 +489,7 @@ enemies_dungeon_second_room = pygame.sprite.Group()
 curr_enemy_list = enemies  # current list for enemy collision
 treasure_message_display = False  # boolean for if treasure chest message should be displayed
 centre_island_obj.overview = True  # make sure player spawns on central island
+game_end = False  # boolean to check if game is done or not
 # create dungeon door objects
 central_island_door = DungeonDoor(centre_island_obj.position_x_close + (centre_island_obj.width / 2) - 15,
                                   centre_island_obj.position_y_close + 40)
@@ -592,6 +608,17 @@ def dungeon_enemy_spawn(location, location_list, moving_enemy_num, gun_enemy_num
                 enemies.add(enemy)
 
 
+def end_game(screen):
+    # make variables global
+    global game_end
+    # draw things to screen
+    screen.fill(BLACK)
+    while game_end:
+        end_game_interaction()
+        player_obj.message("Well done! You have finished the game. Press ESC to quit.")
+        screen_update()
+
+
 # function to keep timers ticking over while paused
 def timer_continue():
     # make variables global
@@ -641,19 +668,12 @@ def draw_bullet():
     # iterate through list of bullets, and either draw and move, or remove from list
     for bullet_shot in bullets:
         if ((bullet_shot.rect.x < WIDTH and bullet_shot.rect.x > 0 - bullet_shot.size) and
-                (bullet_shot.rect.y < HEIGHT and bullet_shot.rect.y > 0 - bullet_shot.size)):
+                (bullet_shot.rect.y < HEIGHT and bullet_shot.rect.y > 0 - bullet_shot.size) and player_obj.health > 0):
             bullet_shot.move()
             bullet_shot.draw(screen)
         else:
             bullet_shot.kill()
 
-
-# # function to check if player can enter central island door and dungeon
-# def check_central_door_open():
-#     if len(player_obj.inventory) == len(islands) - 1:
-#         central_island_door.can_open = True
-#     else:
-#         player_obj.message("You cannot open this door without the treasures...")
 
 # function to determine whether enemies are dead or not
 def enemy_health_check():
@@ -673,6 +693,7 @@ def enemy_draw_move(location_list):
 def player_draw_or_die():
     # display player movements to screen
     if player_obj.health > 0:
+        player_obj.health_invulnerable_flicker(screen)
         player_obj.draw_player_health(screen)
         player_obj.draw(screen)
     else:
@@ -793,10 +814,13 @@ def check_player_enemy_collision(curr_enemy_list):
     # code to check collision between player and enemy
     enemy_damage_list = pygame.sprite.spritecollide(player_obj, curr_enemy_list, False)
     for enemy in enemy_damage_list:
-        if not player_obj.invulnerable:
+        if not player_obj.invulnerable and enemy.damage != 0:
             player_obj.take_damage(enemy)
             player_obj.invulnerable = True
+            player_obj.draw_health = False
+            player_obj.health_flicker_timer = pygame.time.get_ticks()
             player_obj.invulnerable_timer = pygame.time.get_ticks()
+
 
 
 # function to check for collision between bullets and sword
@@ -805,34 +829,6 @@ def check_sword_bullet_collision():
     global bullets
     # code to check collision between sword and bullets
     pygame.sprite.spritecollide(sword_obj, bullets, True)
-    # for bullet_deflected in bullet_collision_list:
-    #     if abs(bullet_deflected.x_speed) > abs(bullet_deflected.y_speed):
-    #         bullet_deflected.x_speed *= -1
-    #     else:
-    #         bullet_deflected.y_speed *= -1
-
-
-# # function to check for collision between bullets and enemies
-# def check_bullet_enemy_collision(curr_enemy_list):
-#     # make variables global
-#     global bullets
-#     global bullets_deflected
-#     global enemies_dungeon_second_room
-#     global enemies_dungeon_entrance
-#     global enemies_island
-#     global enemies_island2
-#     # code to check collision between bullet and enemies
-#     for bullet_shot in bullets:
-#         if bullet_shot.deflected:
-#             bullets_deflected.add(bullet_shot)
-#     for enemy in curr_enemy_list:
-#         bullet_collision_list = pygame.sprite.spritecollide(enemy, bullets_deflected, False)
-#         if bullet_collision_list:
-#             enemy.health -= 1
-#     for bullet_remove in bullet_collision_list:
-#         bullet_remove.kill()
-#     bullets_deflected.empty()
-
 
 
 # function to check for collision between player and bullets
@@ -949,6 +945,18 @@ def pause_interaction(curr_location):
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_p:
                 paused = False
+
+
+# function for key presses while on endgame screen
+def end_game_interaction():
+    # make variables global
+    global done
+    global game_end
+    # code for key presses
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT or event.type == pygame.K_ESCAPE:
+            game_end = False
+            done = True
 
 
 # function for key presses in peaceful location
@@ -1522,7 +1530,7 @@ def second_dungeon_room():
         # check all enemies are dead, and display dungeon treasure (end of game)
         if not enemies_dungeon_second_room:
             end_chest.draw(screen)
-            end_chest.end_game()
+            end_chest.check_end_game(dungeon_second_room_obj)
 
         # update screen and framerate
         screen_update()
@@ -1548,6 +1556,10 @@ while not done:
 
     if dungeon_second_room_obj.overview:
         second_dungeon_room()
+
+    # display end game screen if game is ended
+    if game_end:
+        end_game(screen)
 
     # display output and framerate
     screen_update()
