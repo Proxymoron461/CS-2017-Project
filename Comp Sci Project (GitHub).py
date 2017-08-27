@@ -40,6 +40,7 @@ class Player(pygame.sprite.Sprite):
         super().__init__()
         self.change_x = 0  # player speed left and right, starts at 0
         self.change_y = 0  # player speed up and down, starts at 0
+        self.speed = 4  # player speed variable
         self.size = player_size  # player rectangle size
         self.colour = RED  # set player colour
         self.image = pygame.Surface([self.size, self.size])
@@ -194,10 +195,11 @@ class DungeonDoor(pygame.sprite.Sprite):
 
     def check_open(self, curr_location):
         if curr_location == centre_island_obj:
-            if len(player_obj.inventory) == len(islands) - 1:
+            if len(player_obj.inventory) == len(islands) - 1 and centre_pot_obj.broken:
                 self.can_open = True
             else:
-                player_obj.message("You cannot open this door without the treasures...")
+                if centre_pot_obj.broken:
+                    player_obj.message("You cannot open this door without the treasures...")
         elif curr_location == dungeon_entrance_obj:
             if not enemies_dungeon_entrance:
                 self.can_open = True
@@ -382,7 +384,8 @@ class BreakObject(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x_position
         self.rect.y = y_position
-    def draw(self):
+        self.broken = False
+    def draw(self, screen):
         if not self.broken:
             pygame.draw.rect(screen, self.colour, self.rect)
 
@@ -402,9 +405,9 @@ class Sword(pygame.sprite.Sprite):
         self.rect.y = player_obj.rect.y + player_obj.size
         # create variables for sword image/sprite at different directions
         self.image_up = self.image
-        self.image_down = pygame.transform.flip(self.image, False, True)
+        self.image_down = pygame.transform.rotate(self.image, 180)
         self.image_left = pygame.transform.rotate(self.image, 90)
-        self.image_right = pygame.transform.flip(self.image_left, True, False)
+        self.image_right = pygame.transform.rotate(self.image, 270)
         self.curr_image = self.image_up
 
     def draw(self, screen):
@@ -413,22 +416,28 @@ class Sword(pygame.sprite.Sprite):
     def attack(self):
         # code to put rectangle x value at area where character is facing
         if player_obj.last_x > 0:
-            self.rect.x = player_obj.rect.x + player_obj.size
             self.curr_image = self.image_right
+            self.rect = self.image.get_rect()
+            self.rect.x = player_obj.rect.x + player_obj.size
         elif player_obj.last_x < 0:
-            self.rect.x = player_obj.rect.x - self.height
             self.curr_image = self.image_left
-        elif player_obj.last_x == 0:
-            self.rect.x = player_obj.rect.x + (player_obj.size / 2) - (self.width / 2)
+            self.rect = self.image.get_rect()
+            self.rect.x = player_obj.rect.x - self.height
 
         # code to put rectangle y value at area where character is facing
         if player_obj.last_y > 0:
-            self.rect.y = player_obj.rect.y + player_obj.size
             self.curr_image = self.image_down
+            self.rect = self.image.get_rect()
+            self.rect.y = player_obj.rect.y + player_obj.size
         elif player_obj.last_y < 0:
-            self.rect.y = player_obj.rect.y - self.height
             self.curr_image = self.image_up
-        elif player_obj.last_y == 0:
+            self.rect = self.image.get_rect()
+            self.rect.y = player_obj.rect.y - self.height
+
+        # code to set sword position if character facing opposite plane
+        if player_obj.last_x == 0:
+            self.rect.x = player_obj.rect.x + (player_obj.size / 2) - (self.width / 2)
+        if player_obj.last_y == 0:
             self.rect.y = player_obj.rect.y + (player_obj.size / 2) - (self.width / 2)
 
     def attack_collision(self, enemy_list):
@@ -445,11 +454,12 @@ class Sword(pygame.sprite.Sprite):
                 enemy.invulnerable = True
                 enemies_hit.add(enemy)
 
-    def check_break(self):
-        # make variables global
-        global breakables
+    def check_break(self, location, location_breakables):
         # create list of objects broken by player sword
-        items_hit_list = pygame.sprite.spritecollide(self, breakables, True)
+        broken_obj_list = pygame.sprite.spritecollide(self, location_breakables, False)
+        for break_obj in broken_obj_list:
+            if location.overview:
+                break_obj.broken = True
 
 
 # create sword object, for use during the game
@@ -489,6 +499,26 @@ class TreasureChest(pygame.sprite.Sprite):
             curr_location.overview = False
 
 
+# create class for tutorial rectangles
+class TutorialRect(pygame.sprite.Sprite):
+    def __init__(self, size, x_position, y_position, message):
+        super().__init__()
+        self.size = size
+        self.colour = BLACK
+        self.image = pygame.Surface([self.size, self.size])
+        self.image.fill(self.colour)
+        self.rect = self.image.get_rect()
+        self.rect.x = x_position
+        self.rect.y = y_position
+        self.message = message
+        self.shown = False
+    def show_tutorial(self, location):
+        if self.rect.colliderect(player_obj) and location.overview and not self.shown:
+            player_obj.message(self.message)
+    def end_tutorial(self):
+        self.shown = True
+
+
 # miscellaneous values
 map.overview = True  # boolean for when player is in map
 on_island = False  # boolean for when player gets onto island
@@ -502,8 +532,9 @@ enemies = pygame.sprite.Group()  # create list of all enemies
 enemies_island2 = pygame.sprite.Group()  # create list of enemies for island 2
 enemies_island = pygame.sprite.Group()  # create list of enemies for island 1
 enemies_dungeon = pygame.sprite.Group()  # create list of enemies for dungeon
+enemies_centre_island = pygame.sprite.Group() # create list of enemies for centre island
 enemies_hit = pygame.sprite.Group()  # create list of enemies hit by sword
-breakables = pygame.sprite.Group()  # create list of breakable items
+centre_island_breakables = pygame.sprite.Group()  # create list of breakable items
 sword_draw = False  # boolean for if sword should be drawn
 swords = pygame.sprite.Group()  # create list of swords
 bullets = pygame.sprite.Group()  # create list of bullets
@@ -519,13 +550,19 @@ treasure_message_display = False  # boolean for if treasure chest message should
 centre_island_obj.overview = True  # make sure player spawns on central island
 game_end = False  # boolean to check if game is done or not
 # create dungeon door objects and list
-central_island_door = DungeonDoor(centre_island_obj.position_x_close + (centre_island_obj.width / 2) - 15,
+central_island_door = DungeonDoor((WIDTH / 2) - 15,
                                   centre_island_obj.position_y_close + 40)
 dungeon_entrance_door = DungeonDoor(dungeon_entrance_obj.rect.x + ((dungeon_entrance_obj.width / 2) - 15),
                                     dungeon_entrance_obj.rect.y + 40)
 doors = pygame.sprite.Group()
 doors.add(central_island_door)
 doors.add(dungeon_entrance_door)
+# create breakable object objects
+centre_pot_obj = BreakObject(40, (WIDTH / 2) - 20, centre_island_obj.position_y_close + 40)
+centre_island_breakables.add(centre_pot_obj)
+# create objects for tutorial messages
+centre_sword_tutorial = TutorialRect(30, (WIDTH / 2 - 15), centre_island_obj.position_y_close + 40 + centre_pot_obj.size, "Press SPACE.")
+
 
 # create list of all game locations
 # locations = pygame.sprite.Group()
@@ -677,13 +714,11 @@ def screen_update():
 def draw_sword(location_list):
     # make variables global
     global sword_draw
-    global breakables
     # code to determine if sword is drawn to screen
     if sword_draw:
         if player_obj.change_x == 0 and player_obj.change_y == 0 and player_obj.health > 0:
             sword_obj.draw(screen)
             sword_obj.attack_collision(location_list)
-            sword_obj.check_break()
         else:
             sword_draw = False
         if pygame.time.get_ticks() - sword_delay >= 700:
@@ -767,14 +802,13 @@ def sword_attack(location_list):
     sword_draw = True
     sword_obj.attack()
     sword_obj.attack_collision(location_list)
-    sword_obj.check_break()
     sword_delay = pygame.time.get_ticks()  # amount of milliseconds before sword sprite disappears
 
 
 # function to determine what happens when island is left
 def check_leave_island(curr_island):
     # code to check if island is being left
-    if player_obj.rect.y + player_obj.size >= curr_island.position_y_close + curr_island.height:
+    if player_obj.rect.y + player_obj.size >= curr_island.position_y_close + curr_island.height - player_obj.speed:
         curr_island.overview = False
         map.overview = True
         curr_island.off = True
@@ -891,13 +925,13 @@ def check_player_door_collision(curr_location, destination, destination_enemies_
 def map_wraparound():
     # if player is in map/sailing screen and they go off the edge, make them reappear on the opposite one
     if player_obj.rect.x + player_obj.size < 0:
-        player_obj.rect.x = WIDTH + 5
+        player_obj.rect.x = WIDTH + player_obj.speed
     elif player_obj.rect.x > WIDTH:
-        player_obj.rect.x = (0 - player_obj.size) - 5
+        player_obj.rect.x = (0 - player_obj.size) - player_obj.speed
     if player_obj.rect.y + player_obj.size < 0:
-        player_obj.rect.y = HEIGHT + 5
+        player_obj.rect.y = HEIGHT + player_obj.speed
     elif player_obj.rect.y > HEIGHT:
-        player_obj.rect.y = (0 - player_obj.size) - 5
+        player_obj.rect.y = (0 - player_obj.size) - player_obj.speed
 
 
 # function for island collision on map
@@ -932,19 +966,19 @@ def location_movement(curr_location, location_list):
             curr_location.overview = False
         if event.type == pygame.KEYDOWN:  # if key is pressed, movement starts
             if event.key == pygame.K_UP or event.key == pygame.K_w:
-                player_obj.change_y = -5
+                player_obj.change_y = -player_obj.speed
                 player_obj.last_y = -1
                 player_obj.last_x = 0
             if event.key == pygame.K_DOWN or event.key == pygame.K_s:
-                player_obj.change_y = 5
+                player_obj.change_y = player_obj.speed
                 player_obj.last_y = 1
                 player_obj.last_x = 0
             if event.key == pygame.K_LEFT or event.key == pygame.K_a:
-                player_obj.change_x = -5
+                player_obj.change_x = -player_obj.speed
                 player_obj.last_y = 0
                 player_obj.last_x = -1
             if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
-                player_obj.change_x = 5
+                player_obj.change_x = player_obj.speed
                 player_obj.last_y = 0
                 player_obj.last_x = 1
             if event.key == pygame.K_p:
@@ -1001,19 +1035,19 @@ def peaceful_location_movement(curr_location):
             curr_location.overview = False
         if event.type == pygame.KEYDOWN:  # if key is pressed, movement starts
             if event.key == pygame.K_UP or event.key == pygame.K_w:
-                player_obj.change_y = -5
+                player_obj.change_y = -player_obj.speed
                 player_obj.last_y = -1
                 player_obj.last_x = 0
             if event.key == pygame.K_DOWN or event.key == pygame.K_s:
-                player_obj.change_y = 5
+                player_obj.change_y = player_obj.speed
                 player_obj.last_y = 1
                 player_obj.last_x = 0
             if event.key == pygame.K_LEFT or event.key == pygame.K_a:
-                player_obj.change_x = -5
+                player_obj.change_x = -player_obj.speed
                 player_obj.last_y = 0
                 player_obj.last_x = -1
             if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
-                player_obj.change_x = 5
+                player_obj.change_x = player_obj.speed
                 player_obj.last_y = 0
                 player_obj.last_x = 1
             if event.key == pygame.K_p:
@@ -1040,19 +1074,19 @@ def map_movement():
             map.overview = False
         if event.type == pygame.KEYDOWN:  # if key is pressed, movement starts
             if event.key == pygame.K_UP or event.key == pygame.K_w:
-                player_obj.change_y = -5
+                player_obj.change_y = -player_obj.speed
                 player_obj.last_y = -1
                 player_obj.last_x = 0
             if event.key == pygame.K_DOWN or event.key == pygame.K_s:
-                player_obj.change_y = 5
+                player_obj.change_y = player_obj.speed
                 player_obj.last_y = 1
                 player_obj.last_x = 0
             if event.key == pygame.K_LEFT or event.key == pygame.K_a:
-                player_obj.change_x = -5
+                player_obj.change_x = -player_obj.speed
                 player_obj.last_y = 0
                 player_obj.last_x = -1
             if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
-                player_obj.change_x = 5
+                player_obj.change_x = player_obj.speed
                 player_obj.last_y = 0
                 player_obj.last_x = 1
             if event.key == pygame.K_p:
@@ -1309,6 +1343,7 @@ def centre_island():
     global sword_draw
     global sword_delay
     global curr_enemy_list
+    global enemies_centre_island
 
     # ensure player speed does not carry over
     player_obj.halt_speed()
@@ -1316,7 +1351,8 @@ def centre_island():
     # loop for island
     while centre_island_obj.overview:
         # code for key presses + movement
-        peaceful_location_movement(centre_island_obj)
+        # peaceful_location_movement(centre_island_obj)
+        location_movement(centre_island_obj, enemies_centre_island)
 
         # fill screen with background colour
         screen.fill(SEA_BLUE)
@@ -1330,6 +1366,12 @@ def centre_island():
         # draw the door on the island
         central_island_door.draw(screen)
 
+        # draw the breakable object on the island
+        centre_pot_obj.draw(screen)
+
+        # check if breakable object is broken
+        sword_obj.check_break(centre_island_obj, centre_island_breakables)
+
         # what happens when player spawns on island
         if on_island:
             land_on_island(centre_island_obj)
@@ -1339,10 +1381,21 @@ def centre_island():
             check_player_door_collision(centre_island_obj, dungeon_entrance_obj, enemies_dungeon_entrance)
 
         # make player leave if exit bottom of island
-        check_leave_island(centre_island_obj)
+        if centre_pot_obj.broken:
+            check_leave_island(centre_island_obj)
 
         # display player movements to screen
         player_draw_or_die()
+
+        # display tutorial message
+        centre_sword_tutorial.show_tutorial(centre_island_obj)
+
+        # remove tutorial message
+        if centre_pot_obj.broken:
+            centre_sword_tutorial.end_tutorial()
+
+        # draw sword to screen
+        draw_sword(enemies_centre_island)
 
         # update screen and framerate
         screen_update()
