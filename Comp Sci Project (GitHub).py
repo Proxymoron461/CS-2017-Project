@@ -199,7 +199,7 @@ class DungeonDoor(pygame.sprite.Sprite):
                 self.can_open = True
             else:
                 if centre_pot_obj.broken:
-                    player_obj.message("You cannot open this door without the treasures...")
+                    player_obj.message("Leave this island, trespasser.")
         elif curr_location == dungeon_entrance_obj:
             if not enemies_dungeon_entrance:
                 self.can_open = True
@@ -501,12 +501,12 @@ class TreasureChest(pygame.sprite.Sprite):
 
 # create class for tutorial rectangles
 class TutorialRect(pygame.sprite.Sprite):
-    def __init__(self, size, x_position, y_position, message):
+    def __init__(self, width, height, x_position, y_position, message):
         super().__init__()
-        self.size = size
+        self.width = width
+        self.height = height
         self.colour = BLACK
-        self.image = pygame.Surface([self.size, self.size])
-        self.image.fill(self.colour)
+        self.image = pygame.Surface([self.width, self.height])
         self.rect = self.image.get_rect()
         self.rect.x = x_position
         self.rect.y = y_position
@@ -555,13 +555,19 @@ central_island_door = DungeonDoor((WIDTH / 2) - 15,
 dungeon_entrance_door = DungeonDoor(dungeon_entrance_obj.rect.x + ((dungeon_entrance_obj.width / 2) - 15),
                                     dungeon_entrance_obj.rect.y + 40)
 doors = pygame.sprite.Group()
-doors.add(central_island_door)
-doors.add(dungeon_entrance_door)
+doors.add(central_island_door, dungeon_entrance_door)
 # create breakable object objects
 centre_pot_obj = BreakObject(40, (WIDTH / 2) - 20, centre_island_obj.position_y_close + 40)
 centre_island_breakables.add(centre_pot_obj)
-# create objects for tutorial messages
-centre_sword_tutorial = TutorialRect(30, (WIDTH / 2 - 15), centre_island_obj.position_y_close + 40 + centre_pot_obj.size, "Press SPACE.")
+# create objects for tutorial messages and list of them
+centre_sword_tutorial = TutorialRect(30, 30, (WIDTH / 2 - 15),
+                                     centre_island_obj.position_y_close + 40 + centre_pot_obj.size, "Press SPACE.")
+movement_tutorial = TutorialRect(30, 30, centre_island_obj.position_x_close + (centre_island_obj.width / 2) - 15,
+            centre_island_obj.position_y_close + (centre_island_obj.height * 0.8), "Use WASD or arrow keys to move.")
+pause_tutorial = TutorialRect(centre_island_obj.width, 60, centre_island_obj.position_x_close,
+                              (centre_island_obj.position_y_close + centre_island_obj.height - 60), "Press P to pause.")
+tutorials = pygame.sprite.Group()
+tutorials.add(centre_sword_tutorial, movement_tutorial, pause_tutorial)
 
 
 # create list of all game locations
@@ -771,7 +777,7 @@ def land_on_island(curr_island):
     # make variables global
     global on_island
     # code to determine what happens
-    player_obj.rect.y = curr_island.position_y_close + (4 * (curr_island.height / 5))
+    player_obj.rect.y = curr_island.position_y_close + (curr_island.height * 0.8)
     player_obj.rect.x = curr_island.position_x_close + (curr_island.width / 2) - (player_obj.size / 2)
     player_obj.halt_speed()
     player_obj.invulnerable_timer = pygame.time.get_ticks()
@@ -1157,6 +1163,10 @@ def pause(curr_location):
         # call timer continue function
         timer_continue()
 
+        # remove pause tutorial message
+        if not pause_tutorial.shown:
+            pause_tutorial.end_tutorial()
+
         # update screen
         screen_update()
 
@@ -1344,6 +1354,7 @@ def centre_island():
     global sword_delay
     global curr_enemy_list
     global enemies_centre_island
+    global tutorials
 
     # ensure player speed does not carry over
     player_obj.halt_speed()
@@ -1387,12 +1398,17 @@ def centre_island():
         # display player movements to screen
         player_draw_or_die()
 
-        # display tutorial message
-        centre_sword_tutorial.show_tutorial(centre_island_obj)
+        # display tutorial messages
+        for tutorial in tutorials:
+            tutorial.show_tutorial(centre_island_obj)
 
-        # remove tutorial message
+        # remove tutorial messages
         if centre_pot_obj.broken:
             centre_sword_tutorial.end_tutorial()
+        if player_obj.change_x != 0 or player_obj.change_y != 0:
+            movement_tutorial.end_tutorial()
+        if player_obj.rect.y + player_obj.size >= centre_island_obj.position_y_close + centre_island_obj.height - (player_obj.speed * 2):
+            pause_tutorial.end_tutorial()
 
         # draw sword to screen
         draw_sword(enemies_centre_island)
