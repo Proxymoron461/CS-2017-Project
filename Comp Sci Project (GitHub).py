@@ -60,7 +60,10 @@ class Player(pygame.sprite.Sprite):
         self.invulnerable_timer = pygame.time.get_ticks()  # create reference timer for invulnerability period
         self.health_flicker_timer = pygame.time.get_ticks() # create reference timer for health flicker
         self.inventory = []  # empty list for use as inventory
-        self.draw_health = True # boolean to check if health should be drawn
+        self.draw_health = True  # boolean to check if health should be drawn
+        self.banner = pygame.image.load("Banner.png").convert()  # sprite for player message banner
+        self.banner.set_colorkey(WHITE)
+        self.banner_rect = self.banner.get_rect()
 
     def move_map(self):
         self.rect.x += self.change_x
@@ -78,8 +81,9 @@ class Player(pygame.sprite.Sprite):
         self.health -= damage_source.damage  # take away enemy damage from player health
 
     def message(self, text):
-        output_text = font.render(text, True, WHITE)
-        pygame.draw.rect(screen, BLACK, [0, 0, WIDTH - 50, 50])
+        output_text = font.render(text, True, BLACK)
+        # pygame.draw.rect(screen, BLACK, [0, 0, WIDTH - 50, 50])
+        screen.blit(self.banner, [0, 0])
         screen.blit(output_text, [20, 10])
 
     def halt_speed(self):
@@ -236,10 +240,14 @@ class MovingEnemy(pygame.sprite.Sprite):
         self.invulnerable = False  # boolean for if enemy can take damage or not
         self.invulnerable_timer = pygame.time.get_ticks()  # sets the current time as reference for invincibility
         self.move_timer = pygame.time.get_ticks()  # sets current time as reference for attack calculation
-        self.found_location = False # boolean to check if position is correct
+        self.found_location = False  # boolean to check if position is correct
+        self.available_spaces = []  # list for places that can be moved to
+        self.unavailable_spaces = []  # list for places that cannot be moved to
+        self.position = [0,0]  # list to contain position of enemy
+        self.player_position = [0,0]  # list to contain position of player
         # self.chest_collision = False  # boolean for if enemy has collided with a chest
         # self.aggressive = True #boolean for if enemy should be attacking or not
-        # self.move_rect = (self.size, 45, self.rect.x + self.size,
+        self.move_rect = self.rect.copy()
         # self.rect.y + self.size)  # set rectangle for checking movement path
 
     # def check_movement(self):
@@ -278,6 +286,28 @@ class MovingEnemy(pygame.sprite.Sprite):
                     self.change_x = -1.5
                     self.change_y = 0
                     self.move_timer = pygame.time.get_ticks()
+
+    def find_path(self):
+        # code to implement searching algorithm
+        self.available_spaces.clear()
+        self.unavailable_spaces.clear()
+        self.position = [self.rect.x, self.rect.y]
+        self.player_position = [player_obj.rect.x, player_obj.rect.y]
+        # if enemy position and player position are equal, in the x or y plane
+        if self.position[0] == self.player_position[0]:
+            self.change_x = 0
+            if self.position[1] >= self.player_position[1]:
+                self.change_y = -1.5
+            else:
+                self.change_y = 1.5
+        elif self.position[1] == self.player_position[1]:
+            self.change_y = 0
+            if self.position[0] >= self.player_position[0]:
+                self.change_x = -1.5
+            else:
+                self.change_x = 1.5
+        # code to actually find a path
+        # else:
 
     def attack(self):
         self.rect.clamp_ip(location_rect)  # keep enemy on island
@@ -394,9 +424,8 @@ class BreakObject(pygame.sprite.Sprite):
 class Sword(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.width = 7
+        self.width = 15
         self.height = 15
-        # self.colour = BLACK
         # load pygame image sprite
         self.image = pygame.image.load("Sword.png").convert()
         self.image.set_colorkey(WHITE)
@@ -479,7 +508,7 @@ class TreasureChest(pygame.sprite.Sprite):
         self.rect.x = position_x
         self.rect.y = position_y
         self.treasure = treasure
-        self.text = "Congratulations! You found the " + self.treasure + "!"
+        self.text = "You found the " + self.treasure + "!"
         self.game_end = False  # boolean for if game is ended
 
     def pick_treasure(self):
@@ -539,7 +568,7 @@ sword_draw = False  # boolean for if sword should be drawn
 swords = pygame.sprite.Group()  # create list of swords
 bullets = pygame.sprite.Group()  # create list of bullets
 bullets_deflected = pygame.sprite.Group()
-font = pygame.font.SysFont('Arial Black', 18, True, False)  # created font for use in player messages
+font = pygame.font.SysFont('Freestyle Script', 24, False, False)  # font for use in messages, with size, bold, italic
 paused = False  # boolean for if the game is paused
 enemy_move_timer = 0  # timer for when enemy can calculate movement
 chests = pygame.sprite.Group()  # group for all chests in game
