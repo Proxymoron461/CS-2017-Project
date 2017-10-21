@@ -15,7 +15,7 @@ GRASS_GREEN = (0, 204, 0)  # colour for green grassy islands
 SAND = (204, 204, 0)  # colour for beach islands
 ROCK = (128, 128, 128)  # colour for rock islands
 MOVING_ENEMY_PURPLE = (255, 51, 255)  # stand-in colour for moving enemies
-GUN_ENEMY_BLUE = (0, 0, 255)
+GUN_ENEMY_BLUE = (0, 0, 255)  # stand-in colour for projectile enemies
 island_material = (GRASS_GREEN, SAND, ROCK)  # tuple for the island material
 
 # initialise PI, for some ellipses and arcs
@@ -124,13 +124,20 @@ class Island(pygame.sprite.Sprite):
         self.position_x_close = (WIDTH / 2) - (self.width / 2)
         self.position_y_close = (HEIGHT / 2) - (self.height / 2)
         self.colour = random.choice(island_material)
-        self.image = pygame.Surface([self.width_map, self.height_map])
-        self.image.fill(self.colour)
-        self.rect = self.image.get_rect()
+        self.image = pygame.image.load("SandIslandClose.png").convert()
+        self.image.set_colorkey(WHITE)
+        self.image_map = pygame.image.load("SandIslandMap.png").convert()
+        self.image_map.set_colorkey(WHITE)
+        # self.rect = [position_x, position_y, self.height_map, self.width_map]
+        # self.image = pygame.Surface([self.width_map, self.height_map])
+        # self.image.fill(self.colour)
+        self.rect = self.image_map.get_rect()
         self.rect.x = position_x
         self.rect.y = position_y
-        self.rect_close = [self.position_x_close, self.position_y_close, self.height,
-                           self.width]  # rectangle for displaying island up close
+        # self.rect_close = [self.position_x_close, self.position_y_close, self.height, self.width]
+        self.rect_close = self.image.get_rect()
+        self.rect_close.x = self.position_x_close
+        self.rect_close.y = self.position_y_close
         self.boundary_rect = [self.position_x_close + 5, self.position_y_close + 5, self.height - 10,
                               self.width - 10]  # rectangle for keeping player in island
         self.overview = False
@@ -139,10 +146,12 @@ class Island(pygame.sprite.Sprite):
         self.island_location = False  # boolean to determine if island spawn location is all good (no collisions)
 
     def draw_close(self, screen):  # drawing code for when player is on island
-        pygame.draw.rect(screen, self.colour, self.rect_close)
+        # pygame.draw.rect(screen, self.colour, self.rect_close)
+        screen.blit(self.image, [self.rect_close.x, self.rect_close.y])
 
     def draw_map(self, screen):
-        pygame.draw.rect(screen, self.colour, self.rect)
+        # pygame.draw.rect(screen, self.colour, self.rect)
+        screen.blit(self.image_map, [self.rect.x, self.rect.y])
 
 
 # create dungeon class, for use
