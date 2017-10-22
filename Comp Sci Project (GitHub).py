@@ -144,6 +144,8 @@ class Island(pygame.sprite.Sprite):
         self.off = False  # boolean to check if player has left island
         self.chest_open = False  # boolean to check if island chest is open
         self.island_location = False  # boolean to determine if island spawn location is all good (no collisions)
+        # create island graph
+        # self.graph = {}
 
     def draw_close(self, screen):  # drawing code for when player is on island
         # pygame.draw.rect(screen, self.colour, self.rect_close)
@@ -256,8 +258,9 @@ class MovingEnemy(pygame.sprite.Sprite):
         self.player_position = [0,0]  # list to contain position of player
         # self.chest_collision = False  # boolean for if enemy has collided with a chest
         # self.aggressive = True #boolean for if enemy should be attacking or not
-        self.move_rect = self.rect.copy()
+        # self.move_rect = self.rect.copy()
         # self.rect.y + self.size)  # set rectangle for checking movement path
+        self.move = True
 
     # def check_movement(self):
     #     # code to stop enemies merging
@@ -328,14 +331,17 @@ class MovingEnemy(pygame.sprite.Sprite):
         #      self.aggressive = False
 
         # attack movement
-        self.move_attack()
+        # self.move_attack()
 
         # check movement
         # self.check_movement()
 
         # apply position changes
-        self.rect.x += self.change_x
-        self.rect.y += self.change_y
+        # self.rect.x += self.change_x
+        # self.rect.y += self.change_y
+
+        # attack player
+        
 
     def draw(self, screen):
         pygame.draw.rect(screen, self.colour, self.rect)
@@ -360,6 +366,7 @@ class GunEnemy(pygame.sprite.Sprite):
         self.can_attack = False  # boolean for if the enemy can attack
         self.damage = 0  # integer for how much damage dealt to player health
         self.found_location = False  # boolean to check if position is correct
+        self.move = False
 
     def attack(self):
         # make variables global
@@ -368,7 +375,7 @@ class GunEnemy(pygame.sprite.Sprite):
         # check enemy can attack
         if pygame.time.get_ticks() - self.attack_timer >= 2000:
             self.can_attack = True
-        if self.can_attack and not pygame.sprite.collide_rect(self, player_obj):
+        if self.can_attack and not pygame.sprite.collide_circle(self, player_obj):
             # code to determine bullet direction and speed
             bullet_x_direction = (player_obj.rect.x - self.rect.x) / math.sqrt((player_obj.rect.x - self.rect.x) ** 2 +
                                                                                (player_obj.rect.y - self.rect.y) ** 2)
@@ -791,12 +798,60 @@ def enemy_health_check():
             enemy.kill()
 
 
+# procedure to find paths for enemies within a location
+def enemies_find_path(location_enemies):
+    for enemy in location_enemies:
+        if enemy.move:  # if enemy is moving enemy
+            location_enemies.remove(enemy)
+
+            # reposition enemies if they are colliding with one another
+            colliding_enemies_list = pygame.sprite.spritecollide(enemy, location_enemies, False)
+            if colliding_enemies_list:
+                for coll_enemy in colliding_enemies_list:
+                    # get the amounts with which the enemies are colliding 
+                    x_overlap = abs(enemy.rect.x - coll_enemy.rect.x)
+                    y_overlap = abs(enemy.rect.y - coll_enemy.rect.y)
+                    # rectify enemy position based on how much that collision is
+                    if x_overlap > y_overlap:
+                        enemy.rect.y -= (y_overlap + 1)
+                    elif x_overlap < y_overlap:
+                        enemy.rect.x -= (x_overlap + 1)
+                    elif x_overlap == y_overlap:
+                        enemy.rect.x -= (x_overlap + 1)
+                        enemy.rect.y -= (y_overlap + 1)
+
+            # calculate enemy position relative to player position
+            if abs(player_obj.rect.x - enemy.rect.x) < abs(player_obj.rect.y - enemy.rect.y):
+                if player_obj.rect.y > enemy.rect.y:
+                    # reposition enemy, if not colliding with another enemy
+                    enemy.rect.y += 1.5
+                    if pygame.sprite.spritecollideany(enemy, location_enemies):
+                        enemy.rect.y -= 1.5
+                else:
+                    enemy.rect.y -= 1.5
+                    if pygame.sprite.spritecollideany(enemy, location_enemies):
+                        enemy.rect.y += 1.5
+            elif abs(player_obj.rect.x - enemy.rect.x) > abs(player_obj.rect.y - enemy.rect.y):
+                if player_obj.rect.x > enemy.rect.x:
+                    enemy.rect.x += 1.5
+                    if pygame.sprite.spritecollideany(enemy, location_enemies):
+                        enemy.rect.x -= 1.5
+                else:
+                    enemy.rect.x -= 1.5
+                    if pygame.sprite.spritecollideany(enemy, location_enemies):
+                        enemy.rect.x += 1.5
+            enemy.rect.clamp_ip(location_rect)  # keep enemy on island
+            location_enemies.add(enemy)
+
+
 # function to determine whether enemies are removed from groups (killed) or if they attack
 def enemy_draw_move(location_list):
     for enemy in location_list:
         enemy.draw(screen)
-        if player_obj.health > 0:
+        if player_obj.health > 0 and not enemy.move:
             enemy.attack()
+    if player_obj.health > 0:
+        enemies_find_path(location_list)
 
 
 def player_draw_or_die():
@@ -820,6 +875,15 @@ def land_on_island(curr_island):
     player_obj.halt_speed()
     player_obj.invulnerable_timer = pygame.time.get_ticks()
     on_island = False
+
+
+# procedure to make sure gun enemies do not fire as soon as you enter a location
+def gun_enemy_delay(location_enemies):
+    for enemy in location_enemies:
+        if not enemy.move:  # if gun enemy
+            # set attack timer to random
+            enemy.can_attack = False
+            enemy.attack_timer = pygame.time.get_ticks() - random.randrange(1000)
 
 
 # function for when player enters dungeon room from bottom
@@ -1235,6 +1299,11 @@ def island():
         # draw the island up close
         island_obj.draw_close(screen)
 
+        # what happens when player spawns on island
+        if on_island:
+            land_on_island(island_obj)
+            gun_enemy_delay(enemies_island)
+
         # code to remove enemies from enemies_island list, draw them to screen, and have them attack
         enemy_draw_move(enemies_island)
 
@@ -1244,10 +1313,6 @@ def island():
 
         # have player attack (on island)
         player_obj.move_close(island_obj.boundary_rect)
-
-        # what happens when player spawns on island
-        if on_island:
-            land_on_island(island_obj)
 
         # make player leave if exit bottom of island
         check_leave_island(island_obj)
@@ -1321,6 +1386,11 @@ def island2():
         # draw the island up close
         island2_obj.draw_close(screen)
 
+        # what happens when player spawns on island
+        if on_island:
+            land_on_island(island2_obj)
+            gun_enemy_delay(enemies_island2)
+
         # code to remove enemies from enemies_island list, draw them to screen, and have them attack
         enemy_draw_move(enemies_island2)
 
@@ -1330,10 +1400,6 @@ def island2():
 
         # have player move (on an island)
         player_obj.move_close(island2_obj.boundary_rect)
-
-        # what happens when player spawns on island
-        if on_island:
-            land_on_island(island2_obj)
 
         # make player leave if exit bottom of island
         check_leave_island(island2_obj)
@@ -1539,6 +1605,11 @@ def dungeon_entrance():
         # draw dungeon entrance floor
         dungeon_entrance_obj.draw(screen)
 
+        # code to check if player has entered room from bottom
+        if room_entry:
+            enter_room_lower(dungeon_entrance_obj)
+            gun_enemy_delay(enemies_dungeon_entrance)
+
         # code to draw enemies to screen
         enemy_draw_move(enemies_dungeon_entrance)
 
@@ -1547,10 +1618,6 @@ def dungeon_entrance():
 
         # code to check if enemies are dead or not
         enemy_health_check()
-
-        # code to check if player has entered room from bottom
-        if room_entry:
-            enter_room_lower(dungeon_entrance_obj)
 
         # display player movements to screen
         player_draw_or_die()
@@ -1621,6 +1688,11 @@ def second_dungeon_room():
         # draw dungeon entrance floor
         dungeon_second_room_obj.draw(screen)
 
+        # code to check if player has entered room from bottom
+        if room_entry:
+            enter_room_lower(dungeon_second_room_obj)
+            gun_enemy_delay(enemies_dungeon_second_room)
+
         # code to draw enemies to screen
         enemy_draw_move(enemies_dungeon_second_room)
 
@@ -1629,10 +1701,6 @@ def second_dungeon_room():
 
         # code to check if enemies are dead or not
         enemy_health_check()
-
-        # code to check if player has entered room from bottom
-        if room_entry:
-            enter_room_lower(dungeon_second_room_obj)
 
         # display player movements to screen
         player_draw_or_die()
