@@ -144,8 +144,49 @@ class Island(pygame.sprite.Sprite):
         self.off = False  # boolean to check if player has left island
         self.chest_open = False  # boolean to check if island chest is open
         self.island_location = False  # boolean to determine if island spawn location is all good (no collisions)
-        # create island graph
-        # self.graph = {}
+        # create island graph, in dictionary as list
+        self.graph = {
+            'A1': ['A2', 'B1'],
+            'A2': ['A1', 'B2', 'A3'],
+            'A3': ['A2', 'B3', 'A4'],
+            'A4': ['A3', 'B4', 'A5'],
+            'A5': ['A4', 'B5'],
+            'B1': ['A1', 'C1','B2'],
+            'B2': ['B1', 'A2', 'C2', 'B3'],
+            'B3': ['B2', 'A3', 'C3', 'B4'],
+            'B4': ['B3', 'A4', 'C4', 'B5'],
+            'B5': ['B4', 'A5', 'C5'],
+            'C1': ['B1', 'D1', 'C2'],
+            'C2': ['C1', 'B2', 'D2', 'C3'],
+            'C3': ['C2', 'B3', 'D3', 'C4'],
+            'C4': ['C3', 'B4', 'D4', 'C5'],
+            'C5': ['C4', 'B5', 'D5'],
+            'D1': ['C1', 'E1', 'D2'],
+            'D2': ['D1', 'C2', 'E2', 'D3'],
+            'D3': ['D2', 'C3', 'E3', 'D4'],
+            'D4': ['D3', 'C4', 'E4', 'D5'],
+            'D5': ['D4', 'C5', 'E5'],
+            'E1': ['D1', 'E2'],
+            'E2': ['E1', 'D2', 'E3'],
+            'E3': ['E2', 'D3', 'E4'],
+            'E4': ['E3', 'D4', 'E5'],
+            'E5': ['E4', 'D5']
+        }
+        # create dictionary to transform numbers into graph letters, and back again
+        self.graph_transfer = {
+            1: 'A',
+            2: 'B',
+            3: 'C',
+            4: 'D',
+            5: 'E',
+            'A': 1,
+            'B': 2,
+            'C': 3,
+            'D': 4,
+            'E': 5
+        }
+        self.graph_height = self.height / 5
+        self.graph_width = self.width / 5
 
     def draw_close(self, screen):  # drawing code for when player is on island
         # pygame.draw.rect(screen, self.colour, self.rect_close)
@@ -154,6 +195,30 @@ class Island(pygame.sprite.Sprite):
     def draw_map(self, screen):
         # pygame.draw.rect(screen, self.colour, self.rect)
         screen.blit(self.image_map, [self.rect.x, self.rect.y])
+
+    def get_graph_position(self, item, item_x, item_y):
+        # method to place an item in the centre of a graph square
+        x_position = item_x - self.position_x_close
+        y_position = item_y - self.position_y_close
+        graph_x = (x_position // self.graph_width) + 1
+        graph_y = (y_position // self.graph_height) + 1
+        graph_y = self.graph_transfer[graph_y]
+        return (graph_x, graph_y)
+
+    def place_in_graph(self, item, item_pos=()):
+        graph_x = item_pos[0]
+        graph_y = item_pos[1]
+        graph_x = (graph_x - 1) * self.graph_width
+        graph_y = self.graph_transfer[graph_y]
+        graph_y = (graph_y - 1) * self.graph_height
+        graph_x += (self.graph_width / 2)
+        graph_y += (self.graph_height / 2)
+        graph_x -= (item.size / 2)
+        graph_y -= (item.size / 2)
+        graph_x += self.position_x_close
+        graph_y += self.position_y_close
+        item.rect.x = graph_x
+        item.rect.y = graph_y
 
 
 # create dungeon class, for use
@@ -169,8 +234,76 @@ class Dungeon():
         self.rect.x = 50
         self.rect.y = 50
         self.chest_open = False  # boolean for if chest is open
+        # create dungeon graph, in dictionary as list
+        self.graph = {
+            'A1': ['A2', 'B1'],
+            'A2': ['A1', 'B2', 'A3'],
+            'A3': ['A2', 'B3', 'A4'],
+            'A4': ['A3', 'B4', 'A5'],
+            'A5': ['A4', 'B5'],
+            'B1': ['A1', 'C1', 'B2'],
+            'B2': ['B1', 'A2', 'C2', 'B3'],
+            'B3': ['B2', 'A3', 'C3', 'B4'],
+            'B4': ['B3', 'A4', 'C4', 'B5'],
+            'B5': ['B4', 'A5', 'C5'],
+            'C1': ['B1', 'D1', 'C2'],
+            'C2': ['C1', 'B2', 'D2', 'C3'],
+            'C3': ['C2', 'B3', 'D3', 'C4'],
+            'C4': ['C3', 'B4', 'D4', 'C5'],
+            'C5': ['C4', 'B5', 'D5'],
+            'D1': ['C1', 'E1', 'D2'],
+            'D2': ['D1', 'C2', 'E2', 'D3'],
+            'D3': ['D2', 'C3', 'E3', 'D4'],
+            'D4': ['D3', 'C4', 'E4', 'D5'],
+            'D5': ['D4', 'C5', 'E5'],
+            'E1': ['D1', 'E2'],
+            'E2': ['E1', 'D2', 'E3'],
+            'E3': ['E2', 'D3', 'E4'],
+            'E4': ['E3', 'D4', 'E5'],
+            'E5': ['E4', 'D5']
+        }
+        # create dictionary to transform numbers into graph letters, and back again
+        self.graph_transfer = {
+            1: 'A',
+            2: 'B',
+            3: 'C',
+            4: 'D',
+            5: 'E',
+            'A': 1,
+            'B': 2,
+            'C': 3,
+            'D': 4,
+            'E': 5
+        }
+        self.graph_height = self.height / 5
+        self.graph_width = self.width / 5
+
     def draw(self, screen):
         pygame.draw.rect(screen, self.colour, self.rect)
+
+    def get_graph_position(self, item, item_x, item_y):
+        # method to place an item in the centre of a graph square
+        x_position = item_x - self.rect.x
+        y_position = item_y - self.rect.y
+        graph_x = (x_position // self.graph_width) + 1
+        graph_y = (y_position // self.graph_height) + 1
+        graph_y = self.graph_transfer[graph_y]
+        return (graph_x, graph_y)
+
+    def place_in_graph(self, item, item_pos=()):
+        graph_x = item_pos[0]
+        graph_y = item_pos[1]
+        graph_x = (graph_x - 1) * self.graph_width
+        graph_y = self.graph_transfer[graph_y]
+        graph_y = (graph_y - 1) * self.graph_height
+        graph_x += (self.graph_width / 2)
+        graph_y += (self.graph_height / 2)
+        graph_x -= (item.size / 2)
+        graph_y -= (item.size / 2)
+        graph_x += self.rect.x
+        graph_y += self.rect.y
+        item.rect.x = graph_x
+        item.rect.y = graph_y
 
 
 # create dungeon objects
@@ -261,6 +394,7 @@ class MovingEnemy(pygame.sprite.Sprite):
         # self.move_rect = self.rect.copy()
         # self.rect.y + self.size)  # set rectangle for checking movement path
         self.move = True
+        self.path = []
 
     # def check_movement(self):
     #     # code to stop enemies merging
@@ -613,7 +747,10 @@ pause_tutorial = TutorialRect(centre_island_obj.width, 60, centre_island_obj.pos
                               (centre_island_obj.position_y_close + centre_island_obj.height - 60), "Press P to pause.")
 tutorials = pygame.sprite.Group()
 tutorials.add(centre_sword_tutorial, movement_tutorial, pause_tutorial)
-
+# create lists for enemy path-finding
+available_spaces = []
+unavailable_spaces = []
+visited = []
 
 # create list of all game locations
 # locations = pygame.sprite.Group()
@@ -663,8 +800,11 @@ def island_moving_enemy_spawn(location, location_list, enemy_num):
         while not enemy.found_location:
             enemy_x = random.randrange(location.position_x_close + 1, location.position_x_close + location.width - 21)
             enemy_y = random.randrange(location.position_y_close + 1, location.position_y_close + location.height - 61)
-            enemy.rect.x = enemy_x
-            enemy.rect.y = enemy_y
+            enemy_pos = location.get_graph_position(enemy, enemy_x, enemy_y)
+            print(enemy_pos)
+            location.place_in_graph(enemy, enemy_pos)
+            # enemy.rect.x = enemy_x
+            # enemy.rect.y = enemy_y
             if not pygame.sprite.spritecollideany(enemy, location_list, pygame.sprite.collide_circle):
                 enemy.found_location = True
                 location_list.add(enemy)
@@ -687,8 +827,10 @@ def island_gun_enemy_spawn(location, location_list, enemy_num):
         while not enemy.found_location:
             enemy_x = random.randrange(location.position_x_close + 1, location.position_x_close + location.width - 21)
             enemy_y = random.randrange(location.position_y_close + 1, location.position_y_close + location.height - 61)
-            enemy.rect.x = enemy_x
-            enemy.rect.y = enemy_y
+            enemy_pos = location.get_graph_position(enemy, enemy_x, enemy_y)
+            location.place_in_graph(enemy, enemy_pos)
+            # enemy.rect.x = enemy_x
+            # enemy.rect.y = enemy_y
             if not pygame.sprite.spritecollideany(enemy, location_list, pygame.sprite.collide_circle):
                 enemy.found_location = True
                 location_list.add(enemy)
@@ -716,8 +858,10 @@ def dungeon_enemy_spawn(location, location_list, moving_enemy_num, gun_enemy_num
         while not enemy.found_location:
             enemy_x = random.randrange(location.rect.x + 1, location.rect.x + location.width - 21)
             enemy_y = random.randrange(location.rect.y + 51, location.rect.y + location.height - 61)
-            enemy.rect.x = enemy_x
-            enemy.rect.y = enemy_y
+            enemy_pos = location.get_graph_position(enemy, enemy_x, enemy_y)
+            location.place_in_graph(enemy, enemy_pos)
+            # enemy.rect.x = enemy_x
+            # enemy.rect.y = enemy_y
             if not pygame.sprite.spritecollideany(enemy, location_list, pygame.sprite.collide_circle):
                 enemy.found_location = True
                 location_list.add(enemy)
@@ -799,59 +943,83 @@ def enemy_health_check():
 
 
 # procedure to find paths for enemies within a location
-def enemies_find_path(location_enemies):
+def enemies_find_path(location, location_enemies):
+    available_spaces.clear()
+    unavailable_spaces.clear()
+    # add all enemy positions as unavailable spaces, should not be any duplicates
+    for enemy in location_enemies:
+        unavailable_spaces.append(location.get_graph_position(enemy, enemy.rect.x, enemy.rect.y))
+    # add player position as end goal
+    end_vertex = location.get_graph_position(player_obj, player_obj.rect.x, player_obj.rect.y)
+    # actual pathfinding algorithm (depth-first search)
     for enemy in location_enemies:
         if enemy.move:  # if enemy is moving enemy
+            visited.clear()
+            enemy.path.clear()
             location_enemies.remove(enemy)
+            current_vertex = location.get_graph_position(enemy, enemy.rect.x, enemy.rect.y)
+            visited.append(current_vertex)
+            # while not at player vertex
+            while current_vertex != end_vertex or i <= 15:
+                vertex = location.graph[current_vertex].pop()
+                if (vertex not in visited) and (vertex in available_spaces):
+                    visited.append(vertex)
+                    enemy.path.append(vertex)
+                    available_spaces.remove(vertex)
+                    unavailable_spaces.append(vertex)
+                    for next_vertex in location.graph[vertex]:
+                        available_spaces.append(next_vertex)
+                    current_vertex = vertex
 
-            # reposition enemies if they are colliding with one another
-            colliding_enemies_list = pygame.sprite.spritecollide(enemy, location_enemies, False)
-            if colliding_enemies_list:
-                for coll_enemy in colliding_enemies_list:
-                    # get the amounts with which the enemies are colliding 
-                    x_overlap = abs(enemy.rect.x - coll_enemy.rect.x)
-                    y_overlap = abs(enemy.rect.y - coll_enemy.rect.y)
-                    # rectify enemy position based on how much that collision is
-                    if x_overlap > y_overlap:
-                        enemy.rect.y -= (y_overlap + 1)
-                    elif x_overlap < y_overlap:
-                        enemy.rect.x -= (x_overlap + 1)
-                    elif x_overlap == y_overlap:
-                        enemy.rect.x -= (x_overlap + 1)
-                        enemy.rect.y -= (y_overlap + 1)
 
-            # calculate enemy position relative to player position
-            if abs(player_obj.rect.x - enemy.rect.x) < abs(player_obj.rect.y - enemy.rect.y):
-                if player_obj.rect.y > enemy.rect.y:
-                    # reposition enemy, if not colliding with another enemy
-                    enemy.rect.y += 1.5
-                    if pygame.sprite.spritecollideany(enemy, location_enemies):
-                        enemy.rect.y -= 1.5
-                else:
-                    enemy.rect.y -= 1.5
-                    if pygame.sprite.spritecollideany(enemy, location_enemies):
-                        enemy.rect.y += 1.5
-            elif abs(player_obj.rect.x - enemy.rect.x) > abs(player_obj.rect.y - enemy.rect.y):
-                if player_obj.rect.x > enemy.rect.x:
-                    enemy.rect.x += 1.5
-                    if pygame.sprite.spritecollideany(enemy, location_enemies):
-                        enemy.rect.x -= 1.5
-                else:
-                    enemy.rect.x -= 1.5
-                    if pygame.sprite.spritecollideany(enemy, location_enemies):
-                        enemy.rect.x += 1.5
-            enemy.rect.clamp_ip(location_rect)  # keep enemy on island
             location_enemies.add(enemy)
+            # # reposition enemies if they are colliding with one another
+            # colliding_enemies_list = pygame.sprite.spritecollide(enemy, location_enemies, False)
+            # if colliding_enemies_list:
+            #     for coll_enemy in colliding_enemies_list:
+            #         # get the amounts with which the enemies are colliding
+            #         x_overlap = abs(enemy.rect.x - coll_enemy.rect.x)
+            #         y_overlap = abs(enemy.rect.y - coll_enemy.rect.y)
+            #         # rectify enemy position based on how much that collision is
+            #         if x_overlap > y_overlap:
+            #             enemy.rect.y -= (y_overlap + 1)
+            #         elif x_overlap < y_overlap:
+            #             enemy.rect.x -= (x_overlap + 1)
+            #         elif x_overlap == y_overlap:
+            #             enemy.rect.x -= (x_overlap + 1)
+            #             enemy.rect.y -= (y_overlap + 1)
+            #
+            # # calculate enemy position relative to player position
+            # if abs(player_obj.rect.x - enemy.rect.x) < abs(player_obj.rect.y - enemy.rect.y):
+            #     if player_obj.rect.y > enemy.rect.y:
+            #         # reposition enemy, if not colliding with another enemy
+            #         enemy.rect.y += 1.5
+            #         if pygame.sprite.spritecollideany(enemy, location_enemies):
+            #             enemy.rect.y -= 1.5
+            #     else:
+            #         enemy.rect.y -= 1.5
+            #         if pygame.sprite.spritecollideany(enemy, location_enemies):
+            #             enemy.rect.y += 1.5
+            # elif abs(player_obj.rect.x - enemy.rect.x) > abs(player_obj.rect.y - enemy.rect.y):
+            #     if player_obj.rect.x > enemy.rect.x:
+            #         enemy.rect.x += 1.5
+            #         if pygame.sprite.spritecollideany(enemy, location_enemies):
+            #             enemy.rect.x -= 1.5
+            #     else:
+            #         enemy.rect.x -= 1.5
+            #         if pygame.sprite.spritecollideany(enemy, location_enemies):
+            #             enemy.rect.x += 1.5
+            # enemy.rect.clamp_ip(location_rect)  # keep enemy on island
 
 
 # function to determine whether enemies are removed from groups (killed) or if they attack
-def enemy_draw_move(location_list):
+def enemy_draw_move(location, location_list):
     for enemy in location_list:
         enemy.draw(screen)
         if player_obj.health > 0 and not enemy.move:
             enemy.attack()
     if player_obj.health > 0:
-        enemies_find_path(location_list)
+        enemies_find_path(location, location_list)
 
 
 def player_draw_or_die():
@@ -1305,7 +1473,7 @@ def island():
             gun_enemy_delay(enemies_island)
 
         # code to remove enemies from enemies_island list, draw them to screen, and have them attack
-        enemy_draw_move(enemies_island)
+        enemy_draw_move(island_obj, enemies_island)
 
         # code to spawn chest on island
         if not enemies_island:
@@ -1392,7 +1560,7 @@ def island2():
             gun_enemy_delay(enemies_island2)
 
         # code to remove enemies from enemies_island list, draw them to screen, and have them attack
-        enemy_draw_move(enemies_island2)
+        enemy_draw_move(island2_obj, enemies_island2)
 
         # code to spawn chest on island
         if not enemies_island2:
@@ -1611,7 +1779,7 @@ def dungeon_entrance():
             gun_enemy_delay(enemies_dungeon_entrance)
 
         # code to draw enemies to screen
-        enemy_draw_move(enemies_dungeon_entrance)
+        enemy_draw_move(dungeon_entrance_obj, enemies_dungeon_entrance)
 
         # have player move (within dungeon bounds)
         player_obj.move_close(dungeon_entrance_obj)
@@ -1694,7 +1862,7 @@ def second_dungeon_room():
             gun_enemy_delay(enemies_dungeon_second_room)
 
         # code to draw enemies to screen
-        enemy_draw_move(enemies_dungeon_second_room)
+        enemy_draw_move(dungeon_second_room_obj, enemies_dungeon_second_room)
 
         # have player move (within dungeon bounds)
         player_obj.move_close(dungeon_second_room_obj)
