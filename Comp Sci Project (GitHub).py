@@ -58,7 +58,7 @@ class Player(pygame.sprite.Sprite):
         self.max_health = 5  # integer for maximum player health
         self.invulnerable = False  # boolean for if player is invulnerable or not
         self.invulnerable_timer = pygame.time.get_ticks()  # create reference timer for invulnerability period
-        self.health_flicker_timer = pygame.time.get_ticks() # create reference timer for health flicker
+        self.health_flicker_timer = pygame.time.get_ticks()  # create reference timer for health flicker
         self.inventory = []  # empty list for use as inventory
         self.draw_health = True  # boolean to check if health should be drawn
         self.banner = pygame.image.load("Banner.png").convert()  # sprite for player message banner
@@ -151,7 +151,7 @@ class Island(pygame.sprite.Sprite):
             'A3': ['A2', 'B3', 'A4'],
             'A4': ['A3', 'B4', 'A5'],
             'A5': ['A4', 'B5'],
-            'B1': ['A1', 'C1','B2'],
+            'B1': ['A1', 'C1', 'B2'],
             'B2': ['B1', 'A2', 'C2', 'B3'],
             'B3': ['B2', 'A3', 'C3', 'B4'],
             'B4': ['B3', 'A4', 'C4', 'B5'],
@@ -313,7 +313,6 @@ dungeon_second_room_obj = Dungeon()
 
 # create dungeon door class, for use
 class DungeonDoor(pygame.sprite.Sprite):
-
     def __init__(self, position_x, position_y):
         super().__init__()
         self.height = 40
@@ -387,8 +386,8 @@ class MovingEnemy(pygame.sprite.Sprite):
         self.found_location = False  # boolean to check if position is correct
         self.available_spaces = []  # list for places that can be moved to
         self.unavailable_spaces = []  # list for places that cannot be moved to
-        self.position = [0,0]  # list to contain position of enemy
-        self.player_position = [0,0]  # list to contain position of player
+        self.position = [0, 0]  # list to contain position of enemy
+        self.player_position = [0, 0]  # list to contain position of player
         # self.chest_collision = False  # boolean for if enemy has collided with a chest
         # self.aggressive = True #boolean for if enemy should be attacking or not
         # self.move_rect = self.rect.copy()
@@ -433,27 +432,68 @@ class MovingEnemy(pygame.sprite.Sprite):
                     self.change_y = 0
                     self.move_timer = pygame.time.get_ticks()
 
-    def find_path(self):
-        # code to implement searching algorithm
-        self.available_spaces.clear()
+    def find_path(self, location, location_enemies):
+        # # code to implement searching algorithm
+        # self.available_spaces.clear()
+        # self.unavailable_spaces.clear()
+        # self.position = [self.rect.x, self.rect.y]
+        # self.player_position = [player_obj.rect.x, player_obj.rect.y]
+        # # if enemy position and player position are equal, in the x or y plane
+        # if self.position[0] == self.player_position[0]:
+        #     self.change_x = 0
+        #     if self.position[1] >= self.player_position[1]:
+        #         self.change_y = -1.5
+        #     else:
+        #         self.change_y = 1.5
+        # elif self.position[1] == self.player_position[1]:
+        #     self.change_y = 0
+        #     if self.position[0] >= self.player_position[0]:
+        #         self.change_x = -1.5
+        #     else:
+        #         self.change_x = 1.5
+        #         # code to actually find a path
+        #         # else:
+
+        # self.available_spaces.clear()
         self.unavailable_spaces.clear()
-        self.position = [self.rect.x, self.rect.y]
-        self.player_position = [player_obj.rect.x, player_obj.rect.y]
-        # if enemy position and player position are equal, in the x or y plane
-        if self.position[0] == self.player_position[0]:
-            self.change_x = 0
-            if self.position[1] >= self.player_position[1]:
-                self.change_y = -1.5
+        # add all enemy positions as unavailable spaces, should not be any duplicates
+        for enemy in location_enemies:
+            enemy_pos = location.get_graph_position(enemy, enemy.rect.x, enemy.rect.y)
+            enemy_pos = graph_tuple_to_str(enemy_pos)
+            self.unavailable_spaces.append(enemy_pos)
+        # TODO - add breakable objects to this part
+        # add player position as end goal
+        end_vertex = location.get_graph_position(player_obj, player_obj.rect.x, player_obj.rect.y)
+        end_vertex = graph_tuple_to_str(end_vertex)
+
+        # actual pathfinding algorithm (depth-first search?)
+        self.path.clear()
+        location_enemies.remove(self)
+        current_vertex = location.get_graph_position(self, self.rect.x, self.rect.y)
+        current_vertex = graph_tuple_to_str(current_vertex)
+        self.path.append(current_vertex)
+        print(current_vertex)
+        print(end_vertex)
+
+        # while not at player vertex, with upper limit
+        while current_vertex != end_vertex:
+            print(location.graph[current_vertex])
+            vertex = location.graph[current_vertex].pop()
+            print(vertex)
+            if (vertex not in self.path) and (vertex not in self.unavailable_spaces):
+                self.path.append(vertex)
+                # self.available_spaces.remove(vertex)
+                self.unavailable_spaces.append(vertex)
+            # for next_vertex in location.graph[vertex]:
+            #     if next_vertex not in self.unavailable_spaces:
+            #         self.available_spaces.append(next_vertex)
+                current_vertex = vertex
             else:
-                self.change_y = 1.5
-        elif self.position[1] == self.player_position[1]:
-            self.change_y = 0
-            if self.position[0] >= self.player_position[0]:
-                self.change_x = -1.5
-            else:
-                self.change_x = 1.5
-        # code to actually find a path
-        # else:
+                current_vertex = location.graph[current_vertex].pop()
+        location_enemies.add(self)
+        print(self.path)
+        print(unavailable_spaces)
+        return self.path
 
     def attack(self):
         self.rect.clamp_ip(location_rect)  # keep enemy on island
@@ -475,7 +515,6 @@ class MovingEnemy(pygame.sprite.Sprite):
         # self.rect.y += self.change_y
 
         # attack player
-        
 
     def draw(self, screen):
         pygame.draw.rect(screen, self.colour, self.rect)
@@ -543,7 +582,7 @@ class Bullet(pygame.sprite.Sprite):
         self.x_speed = x_speed
         self.y_speed = y_speed
         self.damage = 1  # integer for damage dealt to player health
-        self.deflected = False # boolean for if it has been deflected by player sword
+        self.deflected = False  # boolean for if it has been deflected by player sword
 
     def draw(self, screen):
         screen.blit(self.image, [self.rect.x, self.rect.y])
@@ -565,6 +604,7 @@ class BreakObject(pygame.sprite.Sprite):
         self.rect.x = x_position
         self.rect.y = y_position
         self.broken = False
+
     def draw(self, screen):
         if not self.broken:
             pygame.draw.rect(screen, self.colour, self.rect)
@@ -691,9 +731,11 @@ class TutorialRect(pygame.sprite.Sprite):
         self.rect.y = y_position
         self.message = message
         self.shown = False
+
     def show_tutorial(self, location):
         if self.rect.colliderect(player_obj) and location.overview and not self.shown:
             player_obj.message(self.message)
+
     def end_tutorial(self):
         self.shown = True
 
@@ -711,7 +753,7 @@ enemies = pygame.sprite.Group()  # create list of all enemies
 enemies_island2 = pygame.sprite.Group()  # create list of enemies for island 2
 enemies_island = pygame.sprite.Group()  # create list of enemies for island 1
 enemies_dungeon = pygame.sprite.Group()  # create list of enemies for dungeon
-enemies_centre_island = pygame.sprite.Group() # create list of enemies for centre island
+enemies_centre_island = pygame.sprite.Group()  # create list of enemies for centre island
 enemies_hit = pygame.sprite.Group()  # create list of enemies hit by sword
 centre_island_breakables = pygame.sprite.Group()  # create list of breakable items
 sword_draw = False  # boolean for if sword should be drawn
@@ -742,7 +784,8 @@ centre_island_breakables.add(centre_pot_obj)
 centre_sword_tutorial = TutorialRect(30, 30, (WIDTH / 2 - 15),
                                      centre_island_obj.position_y_close + 40 + centre_pot_obj.size, "Press SPACE.")
 movement_tutorial = TutorialRect(30, 30, centre_island_obj.position_x_close + (centre_island_obj.width / 2) - 15,
-            centre_island_obj.position_y_close + (centre_island_obj.height * 0.8), "Use WASD or arrow keys to move.")
+                                 centre_island_obj.position_y_close + (centre_island_obj.height * 0.8),
+                                 "Use WASD or arrow keys to move.")
 pause_tutorial = TutorialRect(centre_island_obj.width, 60, centre_island_obj.position_x_close,
                               (centre_island_obj.position_y_close + centre_island_obj.height - 60), "Press P to pause.")
 tutorials = pygame.sprite.Group()
@@ -751,6 +794,7 @@ tutorials.add(centre_sword_tutorial, movement_tutorial, pause_tutorial)
 available_spaces = []
 unavailable_spaces = []
 visited = []
+
 
 # create list of all game locations
 # locations = pygame.sprite.Group()
@@ -774,8 +818,8 @@ def island_spawn():
             index_y = random.choice(y_position_list)
             island.rect.x = index_x
             island.rect.y = index_y
-            if not (pygame.sprite.spritecollideany(island, islands, pygame.sprite.collide_circle) or 
-                                                            pygame.sprite.collide_circle(island, centre_island_obj)):
+            if not (pygame.sprite.spritecollideany(island, islands, pygame.sprite.collide_circle) or
+                        pygame.sprite.collide_circle(island, centre_island_obj)):
                 island.island_location = True
                 islands.add(island)
                 x_position_list.remove(index_x)
@@ -942,37 +986,53 @@ def enemy_health_check():
             enemy.kill()
 
 
-# procedure to find paths for enemies within a location
-def enemies_find_path(location, location_enemies):
-    available_spaces.clear()
-    unavailable_spaces.clear()
-    # add all enemy positions as unavailable spaces, should not be any duplicates
-    for enemy in location_enemies:
-        unavailable_spaces.append(location.get_graph_position(enemy, enemy.rect.x, enemy.rect.y))
-    # add player position as end goal
-    end_vertex = location.get_graph_position(player_obj, player_obj.rect.x, player_obj.rect.y)
-    # actual pathfinding algorithm (depth-first search)
-    for enemy in location_enemies:
-        if enemy.move:  # if enemy is moving enemy
-            visited.clear()
-            enemy.path.clear()
-            location_enemies.remove(enemy)
-            current_vertex = location.get_graph_position(enemy, enemy.rect.x, enemy.rect.y)
-            visited.append(current_vertex)
-            # while not at player vertex
-            while current_vertex != end_vertex or i <= 15:
-                vertex = location.graph[current_vertex].pop()
-                if (vertex not in visited) and (vertex in available_spaces):
-                    visited.append(vertex)
-                    enemy.path.append(vertex)
-                    available_spaces.remove(vertex)
-                    unavailable_spaces.append(vertex)
-                    for next_vertex in location.graph[vertex]:
-                        available_spaces.append(next_vertex)
-                    current_vertex = vertex
+# # procedure to find paths for enemies within a location
+# def enemies_find_path(location, location_enemies):
+#     available_spaces.clear()
+#     unavailable_spaces.clear()
+#     # add all enemy positions as unavailable spaces, should not be any duplicates
+#     for enemy in location_enemies:
+#         enemy_pos = location.get_graph_position(enemy, enemy.rect.x, enemy.rect.y)
+#         enemy_pos = graph_tuple_to_str(enemy_pos)
+#         unavailable_spaces.append(enemy_pos)
+#     # TODO - add breakable objects to this part
+#     # add player position as end goal
+#     end_vertex = location.get_graph_position(player_obj, player_obj.rect.x, player_obj.rect.y)
+#     end_vertex = graph_tuple_to_str(end_vertex)
+#     # actual pathfinding algorithm (depth-first search?)
+#     for enemy in location_enemies:
+#         if enemy.move:  # if enemy is moving enemy
+#             visited.clear()
+#             enemy.path.clear()
+#             location_enemies.remove(enemy)
+#             current_vertex = location.get_graph_position(enemy, enemy.rect.x, enemy.rect.y)
+#             current_vertex = graph_tuple_to_str(current_vertex)
+#             visited.append(current_vertex)
+#             enemy.path.append(current_vertex)
+#             print(current_vertex)
+#             print(end_vertex)
+#
+#             # while not at player vertex, with upper limit
+#             while current_vertex != end_vertex:
+#                 print(location.graph[current_vertex])
+#                 vertex = location.graph[current_vertex].pop()
+#                 print(vertex)
+#                 if (vertex not in visited) and (vertex in available_spaces):
+#                     visited.append(vertex)
+#                     enemy.path.append(vertex)
+#                     available_spaces.remove(vertex)
+#                     unavailable_spaces.append(vertex)
+#                 for next_vertex in location.graph[vertex]:
+#                     available_spaces.append(next_vertex)
+#                 current_vertex = vertex
+#             location_enemies.add(enemy)
+#             print(visited)
+#             print(enemy.path)
+#             print(unavailable_spaces)
+#             return visited
 
 
-            location_enemies.add(enemy)
+
             # # reposition enemies if they are colliding with one another
             # colliding_enemies_list = pygame.sprite.spritecollide(enemy, location_enemies, False)
             # if colliding_enemies_list:
@@ -1012,14 +1072,20 @@ def enemies_find_path(location, location_enemies):
             # enemy.rect.clamp_ip(location_rect)  # keep enemy on island
 
 
+# function to transform graph position tuple into string
+def graph_tuple_to_str(item=()):
+    new_item = item[1] + str(int(item[0]))
+    return new_item
+
+
 # function to determine whether enemies are removed from groups (killed) or if they attack
 def enemy_draw_move(location, location_list):
     for enemy in location_list:
         enemy.draw(screen)
         if player_obj.health > 0 and not enemy.move:
             enemy.attack()
-    if player_obj.health > 0:
-        enemies_find_path(location, location_list)
+        elif player_obj.health > 0 and enemy.move:
+            enemy.find_path(location, location_list)
 
 
 def player_draw_or_die():
@@ -1194,7 +1260,6 @@ def check_player_door_collision(curr_location, destination, destination_enemies_
         door.check_open(curr_location)
         if door.can_open:
             door.open_door(curr_location, destination, destination_enemies_list)
-
 
 
 # function to ensure map wrap around to keep player on screen
@@ -1395,14 +1460,13 @@ island_spawn()
 island_moving_enemy_spawn(island_obj, enemies_island, 3)
 
 # create all enemy objects for use on island 2
-island_gun_enemy_spawn(island2_obj, enemies_island2,3 )
+island_gun_enemy_spawn(island2_obj, enemies_island2, 3)
 
 # create all enemy objects for use in dungeon entrance
 dungeon_enemy_spawn(dungeon_entrance_obj, enemies_dungeon_entrance, 2, 2)
 
 # create all enemy objects for use in dungeon second room
 dungeon_enemy_spawn(dungeon_second_room_obj, enemies_dungeon_second_room, 2, 4)
-
 
 # main program loop setup
 done = False
@@ -1679,7 +1743,8 @@ def centre_island():
             centre_sword_tutorial.end_tutorial()
         if player_obj.change_x != 0 or player_obj.change_y != 0:
             movement_tutorial.end_tutorial()
-        if player_obj.rect.y + player_obj.size >= centre_island_obj.position_y_close + centre_island_obj.height - (player_obj.speed * 2):
+        if player_obj.rect.y + player_obj.size >= centre_island_obj.position_y_close + centre_island_obj.height - (
+            player_obj.speed * 2):
             pause_tutorial.end_tutorial()
 
         # draw sword to screen
