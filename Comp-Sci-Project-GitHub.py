@@ -2,7 +2,9 @@
 import pygame
 import random
 import math
-from math import pi
+# import pi from math
+import grid_class
+import queue
 
 # defining a few colours, using their RGB value
 BLACK = (0, 0, 0)
@@ -19,7 +21,7 @@ GUN_ENEMY_BLUE = (0, 0, 255)  # stand-in colour for projectile enemies
 island_material = (GRASS_GREEN, SAND, ROCK)  # tuple for the island material
 
 # initialise PI, for some ellipses and arcs
-PI = pi
+# PI = pi
 
 # initialise window height and width
 WIDTH = 700
@@ -144,49 +146,51 @@ class Island(pygame.sprite.Sprite):
         self.off = False  # boolean to check if player has left island
         self.chest_open = False  # boolean to check if island chest is open
         self.island_location = False  # boolean to determine if island spawn location is all good (no collisions)
-        # create island graph, in dictionary as list
-        self.graph = {
-            'A1': ['A2', 'B1'],
-            'A2': ['A1', 'B2', 'A3'],
-            'A3': ['A2', 'B3', 'A4'],
-            'A4': ['A3', 'B4', 'A5'],
-            'A5': ['A4', 'B5'],
-            'B1': ['A1', 'C1', 'B2'],
-            'B2': ['B1', 'A2', 'C2', 'B3'],
-            'B3': ['B2', 'A3', 'C3', 'B4'],
-            'B4': ['B3', 'A4', 'C4', 'B5'],
-            'B5': ['B4', 'A5', 'C5'],
-            'C1': ['B1', 'D1', 'C2'],
-            'C2': ['C1', 'B2', 'D2', 'C3'],
-            'C3': ['C2', 'B3', 'D3', 'C4'],
-            'C4': ['C3', 'B4', 'D4', 'C5'],
-            'C5': ['C4', 'B5', 'D5'],
-            'D1': ['C1', 'E1', 'D2'],
-            'D2': ['D1', 'C2', 'E2', 'D3'],
-            'D3': ['D2', 'C3', 'E3', 'D4'],
-            'D4': ['D3', 'C4', 'E4', 'D5'],
-            'D5': ['D4', 'C5', 'E5'],
-            'E1': ['D1', 'E2'],
-            'E2': ['E1', 'D2', 'E3'],
-            'E3': ['E2', 'D3', 'E4'],
-            'E4': ['E3', 'D4', 'E5'],
-            'E5': ['E4', 'D5']
-        }
-        # create dictionary to transform numbers into graph letters, and back again
-        self.graph_transfer = {
-            1: 'A',
-            2: 'B',
-            3: 'C',
-            4: 'D',
-            5: 'E',
-            'A': 1,
-            'B': 2,
-            'C': 3,
-            'D': 4,
-            'E': 5
-        }
-        self.graph_height = self.height / 5
-        self.graph_width = self.width / 5
+##        # create island graph, in dictionary as list
+##        self.graph = {
+##            'A1': ['A2', 'B1'],
+##            'A2': ['A1', 'B2', 'A3'],
+##            'A3': ['A2', 'B3', 'A4'],
+##            'A4': ['A3', 'B4', 'A5'],
+##            'A5': ['A4', 'B5'],
+##            'B1': ['A1', 'C1', 'B2'],
+##            'B2': ['B1', 'A2', 'C2', 'B3'],
+##            'B3': ['B2', 'A3', 'C3', 'B4'],
+##            'B4': ['B3', 'A4', 'C4', 'B5'],
+##            'B5': ['B4', 'A5', 'C5'],
+##            'C1': ['B1', 'D1', 'C2'],
+##            'C2': ['C1', 'B2', 'D2', 'C3'],
+##            'C3': ['C2', 'B3', 'D3', 'C4'],
+##            'C4': ['C3', 'B4', 'D4', 'C5'],
+##            'C5': ['C4', 'B5', 'D5'],
+##            'D1': ['C1', 'E1', 'D2'],
+##            'D2': ['D1', 'C2', 'E2', 'D3'],
+##            'D3': ['D2', 'C3', 'E3', 'D4'],
+##            'D4': ['D3', 'C4', 'E4', 'D5'],
+##            'D5': ['D4', 'C5', 'E5'],
+##            'E1': ['D1', 'E2'],
+##            'E2': ['E1', 'D2', 'E3'],
+##            'E3': ['E2', 'D3', 'E4'],
+##            'E4': ['E3', 'D4', 'E5'],
+##            'E5': ['E4', 'D5']
+##        }
+##        # create dictionary to transform numbers into graph letters, and back again
+##        self.graph_transfer = {
+##            1: 'A',
+##            2: 'B',
+##            3: 'C',
+##            4: 'D',
+##            5: 'E',
+##            'A': 1,
+##            'B': 2,
+##            'C': 3,
+##            'D': 4,
+##            'E': 5
+##        }
+##        self.graph_height = self.height / 5
+##        self.graph_width = self.width / 5
+        # create graph with grid_class script
+        self.graph = grid_class.Grid(self.height, self.width)
 
     def draw_close(self, screen):  # drawing code for when player is on island
         # pygame.draw.rect(screen, self.colour, self.rect_close)
@@ -196,29 +200,37 @@ class Island(pygame.sprite.Sprite):
         # pygame.draw.rect(screen, self.colour, self.rect)
         screen.blit(self.image_map, [self.rect.x, self.rect.y])
 
-    def get_graph_position(self, item, item_x, item_y):
-        # method to place an item in the centre of a graph square
-        x_position = item_x - self.position_x_close
-        y_position = item_y - self.position_y_close
-        graph_x = (x_position // self.graph_width) + 1
-        graph_y = (y_position // self.graph_height) + 1
-        graph_y = self.graph_transfer[graph_y]
-        return (graph_x, graph_y)
+    def get_graph_position(self, item):
+        # method to find item position
+        self.graph.find_grid_position(item, self)
+##        x_position = item_x - self.rect.x
+##        y_position = item_y - self.rect.y
+##        graph_x = (x_position // self.graph_width) + 1
+##        graph_y = (y_position // self.graph_height) + 1
+##        graph_y = self.graph_transfer[graph_y]
+##        return (graph_x, graph_y)
 
-    def place_in_graph(self, item, item_pos=()):
-        graph_x = item_pos[0]
-        graph_y = item_pos[1]
-        graph_x = (graph_x - 1) * self.graph_width
-        graph_y = self.graph_transfer[graph_y]
-        graph_y = (graph_y - 1) * self.graph_height
-        graph_x += (self.graph_width / 2)
-        graph_y += (self.graph_height / 2)
-        graph_x -= (item.size / 2)
-        graph_y -= (item.size / 2)
-        graph_x += self.position_x_close
-        graph_y += self.position_y_close
-        item.rect.x = graph_x
-        item.rect.y = graph_y
+    def place_in_graph(self, item, item_pos):
+        # method to place item in centre of graph
+        # print(item_pos)
+        self.graph.place_in_position(item_pos, item, self)
+##        graph_x = item_pos[0]
+##        graph_y = item_pos[1]
+##        graph_x = (graph_x - 1) * self.graph_width
+##        graph_y = self.graph_transfer[graph_y]
+##        graph_y = (graph_y - 1) * self.graph_height
+##        graph_x += (self.graph_width / 2)
+##        graph_y += (self.graph_height / 2)
+##        graph_x -= (item.size / 2)
+##        graph_y -= (item.size / 2)
+##        graph_x += self.rect.x
+##        graph_y += self.rect.y
+##        item.rect.x = graph_x
+##        item.rect.y = graph_y
+
+    def find_neighbours(self, position):
+        # method to find all neighbouring positions
+        self.graph.find_neighbours(position)
 
 
 # create dungeon class, for use
@@ -235,75 +247,85 @@ class Dungeon():
         self.rect.y = 50
         self.chest_open = False  # boolean for if chest is open
         # create dungeon graph, in dictionary as list
-        self.graph = {
-            'A1': ['A2', 'B1'],
-            'A2': ['A1', 'B2', 'A3'],
-            'A3': ['A2', 'B3', 'A4'],
-            'A4': ['A3', 'B4', 'A5'],
-            'A5': ['A4', 'B5'],
-            'B1': ['A1', 'C1', 'B2'],
-            'B2': ['B1', 'A2', 'C2', 'B3'],
-            'B3': ['B2', 'A3', 'C3', 'B4'],
-            'B4': ['B3', 'A4', 'C4', 'B5'],
-            'B5': ['B4', 'A5', 'C5'],
-            'C1': ['B1', 'D1', 'C2'],
-            'C2': ['C1', 'B2', 'D2', 'C3'],
-            'C3': ['C2', 'B3', 'D3', 'C4'],
-            'C4': ['C3', 'B4', 'D4', 'C5'],
-            'C5': ['C4', 'B5', 'D5'],
-            'D1': ['C1', 'E1', 'D2'],
-            'D2': ['D1', 'C2', 'E2', 'D3'],
-            'D3': ['D2', 'C3', 'E3', 'D4'],
-            'D4': ['D3', 'C4', 'E4', 'D5'],
-            'D5': ['D4', 'C5', 'E5'],
-            'E1': ['D1', 'E2'],
-            'E2': ['E1', 'D2', 'E3'],
-            'E3': ['E2', 'D3', 'E4'],
-            'E4': ['E3', 'D4', 'E5'],
-            'E5': ['E4', 'D5']
-        }
-        # create dictionary to transform numbers into graph letters, and back again
-        self.graph_transfer = {
-            1: 'A',
-            2: 'B',
-            3: 'C',
-            4: 'D',
-            5: 'E',
-            'A': 1,
-            'B': 2,
-            'C': 3,
-            'D': 4,
-            'E': 5
-        }
-        self.graph_height = self.height / 5
-        self.graph_width = self.width / 5
+##        self.graph = {
+##            'A1': ['A2', 'B1'],
+##            'A2': ['A1', 'B2', 'A3'],
+##            'A3': ['A2', 'B3', 'A4'],
+##            'A4': ['A3', 'B4', 'A5'],
+##            'A5': ['A4', 'B5'],
+##            'B1': ['A1', 'C1', 'B2'],
+##            'B2': ['B1', 'A2', 'C2', 'B3'],
+##            'B3': ['B2', 'A3', 'C3', 'B4'],
+##            'B4': ['B3', 'A4', 'C4', 'B5'],
+##            'B5': ['B4', 'A5', 'C5'],
+##            'C1': ['B1', 'D1', 'C2'],
+##            'C2': ['C1', 'B2', 'D2', 'C3'],
+##            'C3': ['C2', 'B3', 'D3', 'C4'],
+##            'C4': ['C3', 'B4', 'D4', 'C5'],
+##            'C5': ['C4', 'B5', 'D5'],
+##            'D1': ['C1', 'E1', 'D2'],
+##            'D2': ['D1', 'C2', 'E2', 'D3'],
+##            'D3': ['D2', 'C3', 'E3', 'D4'],
+##            'D4': ['D3', 'C4', 'E4', 'D5'],
+##            'D5': ['D4', 'C5', 'E5'],
+##            'E1': ['D1', 'E2'],
+##            'E2': ['E1', 'D2', 'E3'],
+##            'E3': ['E2', 'D3', 'E4'],
+##            'E4': ['E3', 'D4', 'E5'],
+##            'E5': ['E4', 'D5']
+##        }
+##        # create dictionary to transform numbers into graph letters, and back again
+##        self.graph_transfer = {
+##            1: 'A',
+##            2: 'B',
+##            3: 'C',
+##            4: 'D',
+##            5: 'E',
+##            'A': 1,
+##            'B': 2,
+##            'C': 3,
+##            'D': 4,
+##            'E': 5
+##        }
+##        self.graph_height = self.height / 5
+##        self.graph_width = self.width / 5
+        # create graph with grid_class script
+        self.graph = grid_class.Grid(self.height, self.width)
 
     def draw(self, screen):
         pygame.draw.rect(screen, self.colour, self.rect)
 
-    def get_graph_position(self, item, item_x, item_y):
-        # method to place an item in the centre of a graph square
-        x_position = item_x - self.rect.x
-        y_position = item_y - self.rect.y
-        graph_x = (x_position // self.graph_width) + 1
-        graph_y = (y_position // self.graph_height) + 1
-        graph_y = self.graph_transfer[graph_y]
-        return (graph_x, graph_y)
+    def get_graph_position(self, item):
+        # method to find item position
+        position = self.graph.find_grid_position(item, self)
+        return position
+##        x_position = item_x - self.rect.x
+##        y_position = item_y - self.rect.y
+##        graph_x = (x_position // self.graph_width) + 1
+##        graph_y = (y_position // self.graph_height) + 1
+##        graph_y = self.graph_transfer[graph_y]
+##        return (graph_x, graph_y)
 
-    def place_in_graph(self, item, item_pos=()):
-        graph_x = item_pos[0]
-        graph_y = item_pos[1]
-        graph_x = (graph_x - 1) * self.graph_width
-        graph_y = self.graph_transfer[graph_y]
-        graph_y = (graph_y - 1) * self.graph_height
-        graph_x += (self.graph_width / 2)
-        graph_y += (self.graph_height / 2)
-        graph_x -= (item.size / 2)
-        graph_y -= (item.size / 2)
-        graph_x += self.rect.x
-        graph_y += self.rect.y
-        item.rect.x = graph_x
-        item.rect.y = graph_y
+    def place_in_graph(self, item, item_pos):
+        # method to place item in centre of graph
+        self.graph.place_in_position(item_pos, item, self)
+##        graph_x = item_pos[0]
+##        graph_y = item_pos[1]
+##        graph_x = (graph_x - 1) * self.graph_width
+##        graph_y = self.graph_transfer[graph_y]
+##        graph_y = (graph_y - 1) * self.graph_height
+##        graph_x += (self.graph_width / 2)
+##        graph_y += (self.graph_height / 2)
+##        graph_x -= (item.size / 2)
+##        graph_y -= (item.size / 2)
+##        graph_x += self.rect.x
+##        graph_y += self.rect.y
+##        item.rect.x = graph_x
+##        item.rect.y = graph_y
+
+    def find_neighbours(self, position):
+        # method to find all neighbouring positions
+        self.graph.find_neighbours(position)
 
 
 # create dungeon objects
@@ -412,27 +434,27 @@ class MovingEnemy(pygame.sprite.Sprite):
 
     def move_attack(self):
         # code to attack enemy towards player aggressively
-        if pygame.time.get_ticks() - self.move_timer >= 500:
-            if abs(player_obj.rect.x - self.rect.x) < abs(player_obj.rect.y - self.rect.y):
-                if player_obj.rect.y > self.rect.y:
-                    self.change_x = 0
-                    self.change_y = 1.5
-                    self.move_timer = pygame.time.get_ticks()
-                else:
-                    self.change_x = 0
-                    self.change_y = -1.5
-                    self.move_timer = pygame.time.get_ticks()
-            elif abs(player_obj.rect.x - self.rect.x) > abs(player_obj.rect.y - self.rect.y):
-                if player_obj.rect.x > self.rect.x:
-                    self.change_x = 1.5
-                    self.change_y = 0
-                    self.move_timer = pygame.time.get_ticks()
-                else:
-                    self.change_x = -1.5
-                    self.change_y = 0
-                    self.move_timer = pygame.time.get_ticks()
+        # if pygame.time.get_ticks() - self.move_timer >= 500:
+        if abs(player_obj.rect.x - self.rect.x) < abs(player_obj.rect.y - self.rect.y):
+            if player_obj.rect.y > self.rect.y:
+                self.change_x = 0
+                self.change_y = 1.5
+                self.move_timer = pygame.time.get_ticks()
+            else:
+                self.change_x = 0
+                self.change_y = -1.5
+                self.move_timer = pygame.time.get_ticks()
+        elif abs(player_obj.rect.x - self.rect.x) > abs(player_obj.rect.y - self.rect.y):
+            if player_obj.rect.x > self.rect.x:
+                self.change_x = 1.5
+                self.change_y = 0
+                self.move_timer = pygame.time.get_ticks()
+            else:
+                self.change_x = -1.5
+                self.change_y = 0
+                self.move_timer = pygame.time.get_ticks()
 
-    def find_path(self, location, location_enemies):
+    # def find_path(self, location, location_enemies):
         # # code to implement searching algorithm
         # self.available_spaces.clear()
         # self.unavailable_spaces.clear()
@@ -454,46 +476,46 @@ class MovingEnemy(pygame.sprite.Sprite):
         #         # code to actually find a path
         #         # else:
 
-        # self.available_spaces.clear()
-        self.unavailable_spaces.clear()
-        # add all enemy positions as unavailable spaces, should not be any duplicates
-        for enemy in location_enemies:
-            enemy_pos = location.get_graph_position(enemy, enemy.rect.x, enemy.rect.y)
-            enemy_pos = graph_tuple_to_str(enemy_pos)
-            self.unavailable_spaces.append(enemy_pos)
-        # TODO - add breakable objects to this part
-        # add player position as end goal
-        end_vertex = location.get_graph_position(player_obj, player_obj.rect.x, player_obj.rect.y)
-        end_vertex = graph_tuple_to_str(end_vertex)
-
-        # actual pathfinding algorithm (depth-first search?)
-        self.path.clear()
-        location_enemies.remove(self)
-        current_vertex = location.get_graph_position(self, self.rect.x, self.rect.y)
-        current_vertex = graph_tuple_to_str(current_vertex)
-        self.path.append(current_vertex)
-        print(current_vertex)
-        print(end_vertex)
-
-        # while not at player vertex, with upper limit
-        while current_vertex != end_vertex:
-            print(location.graph[current_vertex])
-            vertex = location.graph[current_vertex].pop()
-            print(vertex)
-            if (vertex not in self.path) and (vertex not in self.unavailable_spaces):
-                self.path.append(vertex)
-                # self.available_spaces.remove(vertex)
-                self.unavailable_spaces.append(vertex)
-            # for next_vertex in location.graph[vertex]:
-            #     if next_vertex not in self.unavailable_spaces:
-            #         self.available_spaces.append(next_vertex)
-                current_vertex = vertex
-            else:
-                current_vertex = location.graph[current_vertex].pop()
-        location_enemies.add(self)
-        print(self.path)
-        print(unavailable_spaces)
-        return self.path
+##        # self.available_spaces.clear()
+##        self.unavailable_spaces.clear()
+##        # add all enemy positions as unavailable spaces, should not be any duplicates
+##        for enemy in location_enemies:
+##            enemy_pos = location.get_graph_position(enemy)
+##            enemy_pos = graph_tuple_to_str(enemy_pos)
+##            self.unavailable_spaces.append(enemy_pos)
+##        # TODO - add breakable objects to this part
+##        # add player position as end goal
+##        end_vertex = location.get_graph_position(player_obj, player_obj.rect.x, player_obj.rect.y)
+##        end_vertex = graph_tuple_to_str(end_vertex)
+##
+##        # actual pathfinding algorithm (depth-first search?)
+##        self.path.clear()
+##        location_enemies.remove(self)
+##        current_vertex = location.get_graph_position(self, self.rect.x, self.rect.y)
+##        current_vertex = graph_tuple_to_str(current_vertex)
+##        self.path.append(current_vertex)
+##        print(current_vertex)
+##        print(end_vertex)
+##
+##        # while not at player vertex, with upper limit
+##        while current_vertex != end_vertex:
+##            print(location.graph[current_vertex])
+##            vertex = location.graph[current_vertex].pop()
+##            print(vertex)
+##            if (vertex not in self.path) and (vertex not in self.unavailable_spaces):
+##                self.path.append(vertex)
+##                # self.available_spaces.remove(vertex)
+##                self.unavailable_spaces.append(vertex)
+##            # for next_vertex in location.graph[vertex]:
+##            #     if next_vertex not in self.unavailable_spaces:
+##            #         self.available_spaces.append(next_vertex)
+##                current_vertex = vertex
+##            else:
+##                current_vertex = location.graph[current_vertex].pop()
+##        location_enemies.add(self)
+##        print(self.path)
+##        print(unavailable_spaces)
+##        return self.path
 
     def attack(self):
         self.rect.clamp_ip(location_rect)  # keep enemy on island
@@ -842,10 +864,11 @@ def island_moving_enemy_spawn(location, location_list, enemy_num):
     for enemy in location_list:
         location_list.remove(enemy)
         while not enemy.found_location:
-            enemy_x = random.randrange(location.position_x_close + 1, location.position_x_close + location.width - 21)
-            enemy_y = random.randrange(location.position_y_close + 1, location.position_y_close + location.height - 61)
-            enemy_pos = location.get_graph_position(enemy, enemy_x, enemy_y)
-            print(enemy_pos)
+            enemy.rect.x = random.randrange(location.position_x_close + 1, location.position_x_close + location.width - 21)
+            enemy.rect.y = random.randrange(location.position_y_close + 1, location.position_y_close + location.height - 61)
+            enemy_pos = location.graph.find_grid_position(enemy, location)
+            # print(enemy_pos)
+            # location.place_in_graph(enemy, location.get_graph_position(enemy))
             location.place_in_graph(enemy, enemy_pos)
             # enemy.rect.x = enemy_x
             # enemy.rect.y = enemy_y
@@ -869,9 +892,10 @@ def island_gun_enemy_spawn(location, location_list, enemy_num):
     for enemy in location_list:
         location_list.remove(enemy)
         while not enemy.found_location:
-            enemy_x = random.randrange(location.position_x_close + 1, location.position_x_close + location.width - 21)
-            enemy_y = random.randrange(location.position_y_close + 1, location.position_y_close + location.height - 61)
-            enemy_pos = location.get_graph_position(enemy, enemy_x, enemy_y)
+            enemy.rect.x = random.randrange(location.position_x_close + 1, location.position_x_close + location.width - 21)
+            enemy.rect.y = random.randrange(location.position_y_close + 1, location.position_y_close + location.height - 61)
+            # enemy_pos = location.get_graph_position(enemy)
+            enemy_pos = location.graph.find_grid_position(enemy, location)
             location.place_in_graph(enemy, enemy_pos)
             # enemy.rect.x = enemy_x
             # enemy.rect.y = enemy_y
@@ -900,9 +924,10 @@ def dungeon_enemy_spawn(location, location_list, moving_enemy_num, gun_enemy_num
     for enemy in location_list:
         location_list.remove(enemy)
         while not enemy.found_location:
-            enemy_x = random.randrange(location.rect.x + 1, location.rect.x + location.width - 21)
-            enemy_y = random.randrange(location.rect.y + 51, location.rect.y + location.height - 61)
-            enemy_pos = location.get_graph_position(enemy, enemy_x, enemy_y)
+            enemy.rect.x = random.randrange(location.rect.x + 1, location.rect.x + location.width - 21)
+            enemy.rect.y = random.randrange(location.rect.x + 1, location.rect.y + location.height - 61)
+            # enemy_pos = location.get_graph_position(enemy)
+            enemy_pos = location.graph.find_grid_position(enemy, location)
             location.place_in_graph(enemy, enemy_pos)
             # enemy.rect.x = enemy_x
             # enemy.rect.y = enemy_y
@@ -1072,6 +1097,46 @@ def enemy_health_check():
             # enemy.rect.clamp_ip(location_rect)  # keep enemy on island
 
 
+# procedure to find paths to player for enemies within location, returns list of squares
+def find_path(location, location_enemies):
+    # create queues for unavailable/available positions
+    unavailable_positions = []
+    visited_positions = []
+    positions_to_visit = queue.Queue()
+    # TODO - remove breakable objects from available locations
+    # remove enemy positions from available locations
+    for enemy in location_enemies:
+        enemy_pos = location.graph.find_grid_position(enemy, location)
+        unavailable_positions.append(enemy_pos)
+        # location.graph.remove_position(enemy_pos)
+    # add player position as end goal
+    end_vertex = location.graph.find_grid_position(player, location)
+    # if already at end_vertex, aweso
+    # go through list of enemies and find path
+    for enemy in location_enemies:
+        # enqueue enemy positions
+        enemy_pos = location.graph.find_grid_position(enemy, location)
+        positions_to_visit.put(enemy_pos)
+        enemy_neighbours = location.graph.find_neighbours(enemy_pos)
+        # code to find optimal path
+        while not positions_to_visit.empty():
+            current_position = positions_to_visit.get()
+            if current_position == end_vertex:
+                # TODO - sort code for when path is found, return something
+                x = 10
+            else:
+                # check difference between x and y distances
+                if (abs(enemy_pos[0] - end_vertex[0]) >= abs(enemy_pos[1] - end_vertex[1])):
+                    # if x distance is larger, travel through y plane
+                    x = 10
+                    
+##                for next_pos in enemy_neighbours:
+##                    if next_pos not in unavailable_positions:
+##                        # find best next position towards goal
+                    
+                        
+
+
 # function to transform graph position tuple into string
 def graph_tuple_to_str(item=()):
     new_item = item[1] + str(int(item[0]))
@@ -1085,7 +1150,8 @@ def enemy_draw_move(location, location_list):
         if player_obj.health > 0 and not enemy.move:
             enemy.attack()
         elif player_obj.health > 0 and enemy.move:
-            enemy.find_path(location, location_list)
+            enemy.move_attack()
+            # enemy.find_path(location, location_list)
 
 
 def player_draw_or_die():
