@@ -146,6 +146,7 @@ class Island(pygame.sprite.Sprite):
         self.off = False  # boolean to check if player has left island
         self.chest_open = False  # boolean to check if island chest is open
         self.island_location = False  # boolean to determine if island spawn location is all good (no collisions)
+        self.breakables = pygame.sprite.Group()  # create list of breakable items per location
 ##        # create island graph, in dictionary as list
 ##        self.graph = {
 ##            'A1': ['A2', 'B1'],
@@ -246,6 +247,7 @@ class Dungeon():
         self.rect.x = 50
         self.rect.y = 50
         self.chest_open = False  # boolean for if chest is open
+        self.breakables = pygame.sprite.Group()  # create list of breakable items per location
         # create dungeon graph, in dictionary as list
 ##        self.graph = {
 ##            'A1': ['A2', 'B1'],
@@ -439,20 +441,25 @@ class MovingEnemy(pygame.sprite.Sprite):
             if player_obj.rect.y > self.rect.y:
                 self.change_x = 0
                 self.change_y = 1.5
-                self.move_timer = pygame.time.get_ticks()
+                # self.move_timer = pygame.time.get_ticks()
             else:
                 self.change_x = 0
                 self.change_y = -1.5
-                self.move_timer = pygame.time.get_ticks()
+                # self.move_timer = pygame.time.get_ticks()
         elif abs(player_obj.rect.x - self.rect.x) > abs(player_obj.rect.y - self.rect.y):
             if player_obj.rect.x > self.rect.x:
                 self.change_x = 1.5
                 self.change_y = 0
-                self.move_timer = pygame.time.get_ticks()
+                # self.move_timer = pygame.time.get_ticks()
             else:
                 self.change_x = -1.5
                 self.change_y = 0
-                self.move_timer = pygame.time.get_ticks()
+                # self.move_timer = pygame.time.get_ticks()
+
+        # apply position changes and keep enemy on island
+        self.rect.clamp_ip(location_rect)
+        self.rect.x += self.change_x
+        self.rect.y += self.change_y
 
     # def find_path(self, location, location_enemies):
         # # code to implement searching algorithm
@@ -777,7 +784,7 @@ enemies_island = pygame.sprite.Group()  # create list of enemies for island 1
 enemies_dungeon = pygame.sprite.Group()  # create list of enemies for dungeon
 enemies_centre_island = pygame.sprite.Group()  # create list of enemies for centre island
 enemies_hit = pygame.sprite.Group()  # create list of enemies hit by sword
-centre_island_breakables = pygame.sprite.Group()  # create list of breakable items
+# centre_island_breakables = pygame.sprite.Group()  # create list of breakable items
 sword_draw = False  # boolean for if sword should be drawn
 swords = pygame.sprite.Group()  # create list of swords
 bullets = pygame.sprite.Group()  # create list of bullets
@@ -801,7 +808,7 @@ doors = pygame.sprite.Group()
 doors.add(central_island_door, dungeon_entrance_door)
 # create breakable object objects
 centre_pot_obj = BreakObject(40, (WIDTH / 2) - 20, centre_island_obj.position_y_close + 40)
-centre_island_breakables.add(centre_pot_obj)
+centre_island_obj.breakables.add(centre_pot_obj)
 # create objects for tutorial messages and list of them
 centre_sword_tutorial = TutorialRect(30, 30, (WIDTH / 2 - 15),
                                      centre_island_obj.position_y_close + 40 + centre_pot_obj.size, "Press SPACE.")
@@ -1098,60 +1105,108 @@ def enemy_health_check():
 
 
 # procedure to find paths to player for enemies within location, returns list of squares
-def find_path(location, location_enemies):
+def find_path(location, location_enemies, location_breakables):
     # create queues for unavailable/available positions
-    unavailable_positions = []
-    visited_positions = []
-    positions_to_visit = queue.Queue()
+    # unavailable_positions = []
+    # visited_positions = []
+    # positions_to_visit = queue.Queue()
+    graph = location.graph
     # TODO - remove breakable objects from available locations
+    for breakable in location_breakables:
+        breakable_pos = graph.find_grid_position(breakable, location)
+        graph.remove_position(breakable_pos)
     # remove enemy positions from available locations
     for enemy in location_enemies:
-        enemy_pos = location.graph.find_grid_position(enemy, location)
-        unavailable_positions.append(enemy_pos)
-        # location.graph.remove_position(enemy_pos)
+        enemy_pos = graph.find_grid_position(enemy, location)
+        # unavailable_positions.append(enemy_pos)
+        if enemy_pos in graph.position_list:
+            graph.remove_position(enemy_pos)
     # add player position as end goal
-    end_vertex = location.graph.find_grid_position(player, location)
-    # if already at end_vertex, aweso
+    end_vertex = graph.find_grid_position(player_obj, location)
     # go through list of enemies and find path
     for enemy in location_enemies:
         # enqueue enemy positions
-        enemy_pos = location.graph.find_grid_position(enemy, location)
-        positions_to_visit.put(enemy_pos)
-        enemy_neighbours = location.graph.find_neighbours(enemy_pos)
-        # code to find optimal path
-        while not positions_to_visit.empty():
-            current_position = positions_to_visit.get()
-            if current_position == end_vertex:
-                # TODO - sort code for when path is found, return something
-                x = 10
-            else:
-                # check difference between x and y distances
-                if (abs(enemy_pos[0] - end_vertex[0]) >= abs(enemy_pos[1] - end_vertex[1])):
-                    # if x distance is larger, travel through y plane
-                    x = 10
-                    
-##                for next_pos in enemy_neighbours:
-##                    if next_pos not in unavailable_positions:
-##                        # find best next position towards goal
-                    
-                        
+        enemy_pos = graph.find_grid_position(enemy, location)
+        graph.add_position(enemy_pos)
+        # positions_to_visit.put(enemy_pos)
+        # enemy_neighbours = location.graph.find_neighbours(enemy_pos)
+        # function to find optimal path
+        path = a_star_search(enemy_pos, graph, end_vertex)
+        print(path)
+        # while not positions_to_visit.empty():
+        #     current_position = positions_to_visit.get()
+        #     if current_position == end_vertex:
+        #         # TODO - sort code for when path is found, return something
+        #         x = 10
+        #     else:
+        #         for next_pos in enemy_neighbours:
+        #             if next_pos not in unavailable_positions:
+        #                 # find best next position towards goal
+        #                 x = 10
 
 
-# function to transform graph position tuple into string
-def graph_tuple_to_str(item=()):
-    new_item = item[1] + str(int(item[0]))
-    return new_item
+# function to conduct a* search and return list of nodes with cost
+def a_star_search(start, graph, goal):
+    # create front queue for node order, and lists for visited lists and cost
+    # front = queue.PriorityQueue()
+    front = grid_class.Priority_Queue()
+    front.put(start, 0)
+    visited = {}
+    cost_so_far = {}
+    path = []
+    visited[start] = None
+    cost_so_far[start] = 0
+    print(start, goal)
+
+    while not front.empty():
+        current = front.get()
+
+        # check if position is same as player position
+        if current == goal:
+            break
+
+        for next in graph.define_neighbours(current):
+            new_cost = cost_so_far[current] + 1
+
+            if next not in cost_so_far or new_cost < cost_so_far[next]:
+                cost_so_far[next] = new_cost
+                priority = new_cost + find_heuristic(goal, next)
+                front.put(next, priority)
+                visited[next] = current
+
+        for item in visited:
+            path.append(item)
+        path.append(goal)
+
+
+        # return visited
+        print(visited)
+        return path
+
+
+# function to return the heuristic between two points, using manhattan system
+def find_heuristic(position_1, position_2):
+    # take in two lists of [x, y] and return integer heuristic
+    x_heuristic = abs(position_1[0] - position_2[0])
+    y_heuristic = abs(position_1[1] - position_2[1])
+    return x_heuristic + y_heuristic
+
+
+# # function to transform graph position tuple into string
+# def graph_tuple_to_str(item=()):
+#     new_item = item[1] + str(int(item[0]))
+#     return new_item
 
 
 # function to determine whether enemies are removed from groups (killed) or if they attack
 def enemy_draw_move(location, location_list):
+    find_path(location, location_list, location.breakables)
     for enemy in location_list:
         enemy.draw(screen)
         if player_obj.health > 0 and not enemy.move:
             enemy.attack()
         elif player_obj.health > 0 and enemy.move:
             enemy.move_attack()
-            # enemy.find_path(location, location_list)
 
 
 def player_draw_or_die():
@@ -1783,7 +1838,7 @@ def centre_island():
         centre_pot_obj.draw(screen)
 
         # check if breakable object is broken
-        sword_obj.check_break(centre_island_obj, centre_island_breakables)
+        sword_obj.check_break(centre_island_obj, centre_island_obj.breakables)
 
         # what happens when player spawns on island
         if on_island:
