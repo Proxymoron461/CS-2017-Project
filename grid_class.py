@@ -33,6 +33,59 @@ class Grid:
             if neighbour in self.position_list:
                 return_neighbours.append(neighbour)
         return return_neighbours
+
+    def find_best_neighbour(self, start, target):
+        neighbours = []
+        up_neighbour = [start[0], start[1] - 1]
+        down_neighbour = [start[0], start[1] + 1]
+        left_neighbour = [start[0] - 1, start[1]]
+        right_neighbour = [start[0] + 1, start[1]]
+
+        # if player is to the right of enemy
+        if target[0] > start[0]:
+            # if player is below enemy
+            if target[1] > start[1]:
+                # check if neighbour is in position
+                if down_neighbour in self.position_list:
+                    self.remove_position(down_neighbour)
+                    return [0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2]
+                elif right_neighbour in self.position_list:
+                    self.remove_position(right_neighbour)
+                    return [2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0]
+                else:
+                    return [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            elif target[1] < start[1]:
+                # check if neighbour is in position
+                if up_neighbour in self.position_list:
+                    self.remove_position(up_neighbour)
+                    return [0, -2, 0, -2, 0, -2, 0, -2, 0, -2, 0, -2, 0, -2, 0, -2, 0, -2, 0, -2]
+                elif right_neighbour in self.position_list:
+                    self.remove_position(right_neighbour)
+                    return [2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0]
+                else:
+                    return [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        elif target[0] < start[0]:
+            # if player is above enemy
+            if target[1] > start[1]:
+                # check if neighbour is in position
+                if down_neighbour in self.position_list:
+                    self.remove_position(down_neighbour)
+                    return [0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2]
+                elif left_neighbour in self.position_list:
+                    self.remove_position(left_neighbour)
+                    return [-2, 0, -2, 0, -2, 0, -2, 0, -2, 0, -2, 0, -2, 0, -2, 0, -2, 0, -2, 0]
+                else:
+                    return [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            elif target[1] < start[1]:
+                # check if neighbour is in position
+                if up_neighbour in self.position_list:
+                    elf.remove_position(up_neighbour)
+                    return [0, -2, 0, -2, 0, -2, 0, -2, 0, -2, 0, -2, 0, -2, 0, -2, 0, -2, 0, -2]
+                elif left_neighbour in self.position_list:
+                    self.remove_position(left_neighbour)
+                    return [-2, 0, -2, 0, -2, 0, -2, 0, -2, 0, -2, 0, -2, 0, -2, 0, -2, 0, -2, 0]
+                else:
+                    return [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
                 
     def remove_position(self, position):
         # self.no_go_list.append(position)
