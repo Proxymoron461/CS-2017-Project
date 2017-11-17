@@ -1200,7 +1200,7 @@ def find_heuristic(position_1, position_2):
 
 # function to determine whether enemies are removed from groups (killed) or if they attack
 def enemy_draw_move(location, location_list):
-    find_path(location, location_list, location.breakables)
+    # find_path(location, location_list, location.breakables)
     for enemy in location_list:
         enemy.draw(screen)
         if player_obj.health > 0 and not enemy.move:
