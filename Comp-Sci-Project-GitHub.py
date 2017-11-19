@@ -185,8 +185,6 @@ class Island(pygame.sprite.Sprite):
         global treasure_message_timer
         global done
         global on_island
-        global sword_draw
-        global sword_delay
         global curr_enemy_list
         global treasure_message_display
         global bullets
@@ -243,7 +241,7 @@ class Island(pygame.sprite.Sprite):
             check_player_enemy_collision(self.enemies)
 
             # code to check collision between bullet and sword
-            if sword_draw:
+            if sword_obj.will_draw:
                 # check sword-bullet collision
                 check_sword_bullet_collision()
 
@@ -381,8 +379,6 @@ class Dungeon(pygame.sprite.Sprite):
         global pause_timer
         global treasure_message_timer
         global done
-        global sword_draw
-        global sword_delay
         global curr_enemy_list
         global room_entry
         global bullets
@@ -426,7 +422,7 @@ class Dungeon(pygame.sprite.Sprite):
             check_player_enemy_collision(self.enemies)
 
             # code to check collision between bullet and sword
-            if sword_draw:
+            if sword_obj.will_draw:
                 # check sword-bullet collision
                 check_sword_bullet_collision()
 
@@ -794,6 +790,9 @@ class Sword(pygame.sprite.Sprite):
         self.image_left = pygame.transform.rotate(self.image, 90)
         self.image_right = pygame.transform.rotate(self.image, 270)
         self.curr_image = self.image_up
+        self.delay = pygame.time.get_ticks()  # amount of milliseconds before sword sprite disappears
+        self.will_draw = False  # boolean to draw sword object onto screen
+
 
     def draw(self, screen):
         screen.blit(self.curr_image, [self.rect.x, self.rect.y])
@@ -914,7 +913,6 @@ islands.add(island_obj, island2_obj, island3_obj, island4_obj)  # add island obj
 enemies = pygame.sprite.Group()  # create list of all enemies
 enemies_hit = pygame.sprite.Group()  # create list of enemies hit by sword
 # centre_island_breakables = pygame.sprite.Group()  # create list of breakable items
-sword_draw = False  # boolean for if sword should be drawn
 swords = pygame.sprite.Group()  # create list of swords
 bullets = pygame.sprite.Group()  # create list of bullets
 bullets_deflected = pygame.sprite.Group()
@@ -1083,10 +1081,9 @@ def timer_continue():
     global treasure_message_timer
     global pause_timer
     global done
-    global sword_delay
     # code to keep timers ticking over
-    if sword_draw:
-        sword_delay += (pygame.time.get_ticks() - pause_timer)
+    if sword_obj.will_draw:
+        sword_obj.delay += (pygame.time.get_ticks() - pause_timer)
     player_obj.invulnerable_timer += (pygame.time.get_ticks() - pause_timer)
     for enemy_obj in enemies:
         enemy_obj.invulnerable_timer += (pygame.time.get_ticks() - pause_timer)
@@ -1105,17 +1102,15 @@ def screen_update():
 
 # function to draw sword to screen
 def draw_sword(location_list):
-    # make variables global
-    global sword_draw
     # code to determine if sword is drawn to screen
-    if sword_draw:
+    if sword_obj.will_draw:
         if player_obj.change_x == 0 and player_obj.change_y == 0 and player_obj.health > 0:
             sword_obj.draw(screen)
             sword_obj.attack_collision(location_list)
         else:
-            sword_draw = False
-        if pygame.time.get_ticks() - sword_delay >= 700:
-            sword_draw = False
+            sword_obj.will_draw = False
+        if pygame.time.get_ticks() - sword_obj.delay >= 700:
+            sword_obj.will_draw = False
 
 
 # function to determine bullet movement
@@ -1387,15 +1382,12 @@ def enter_room_lower(curr_location):
 
 # function to deal with attacking
 def sword_attack(location_list):
-    # make variables global
-    global sword_delay
-    global sword_draw
     # code for attacking and bringing player to halt
     player_obj.halt_speed()
-    sword_draw = True
+    sword_obj.will_draw = True
     sword_obj.attack()
     sword_obj.attack_collision(location_list)
-    sword_delay = pygame.time.get_ticks()  # amount of milliseconds before sword sprite disappears
+    sword_obj.delay = pygame.time.get_ticks()  # amount of milliseconds before sword sprite disappears
 
 
 # function to determine what happens when island is left
@@ -1541,8 +1533,6 @@ def location_movement(curr_location, location_list):
     # make variables global
     global done
     global pause_timer
-    global sword_draw
-    global sword_delay
     # code for key presses + movement
     for event in pygame.event.get():  # if the user does something
         if event.type == pygame.QUIT or event.type == pygame.K_ESCAPE:  # if the user clicks close or presses escape
@@ -1703,13 +1693,13 @@ island_spawn()
 island_moving_enemy_spawn(island_obj, island_obj.enemies, 2, "default")
 
 # create all enemy objects for use on island 2
-island_gun_enemy_spawn(island2_obj, island2_obj.enemies, 3)
+island_gun_enemy_spawn(island2_obj, island2_obj.enemies, 2)
 
 # create all charge enemies for tutorial island 3
-island_moving_enemy_spawn(island3_obj, island3_obj.enemies, 2, "charge")
+island_moving_enemy_spawn(island3_obj, island3_obj.enemies, 1, "charge")
 
 # create all follow enemies for tutorial island 4
-island_moving_enemy_spawn(island4_obj, island4_obj.enemies, 2, "follow")
+island_moving_enemy_spawn(island4_obj, island4_obj.enemies, 1, "follow")
 
 # create all enemy objects for use in dungeon entrance
 dungeon_enemy_spawn(dungeon_entrance_obj, dungeon_entrance_obj.enemies, 2, 2)
@@ -1764,8 +1754,8 @@ def pause(curr_location):
 #     global treasure_message_timer
 #     global done
 #     global on_island
-#     global sword_draw
-#     global sword_delay
+#     global sword_obj.will_draw
+#     global sword_obj.delay
 #     global curr_enemy_list
 #     global treasure_message_display
 #     global bullets
@@ -1823,7 +1813,7 @@ def pause(curr_location):
 #         check_player_enemy_collision(island_obj.enemies)
 #
 #         # code to check collision between bullet and sword
-#         if sword_draw:
+#         if sword_obj.will_draw:
 #             # check sword-bullet collision
 #             check_sword_bullet_collision()
 #
@@ -1851,8 +1841,8 @@ def pause(curr_location):
 #     global treasure_message_timer
 #     global done
 #     global on_island
-#     global sword_draw
-#     global sword_delay
+#     global sword_obj.will_draw
+#     global sword_obj.delay
 #     global curr_enemy_list
 #     global bullets
 #
@@ -1909,7 +1899,7 @@ def pause(curr_location):
 #         check_player_enemy_collision(island2_obj.enemies)
 #
 #         # code to check collision between bullet and sword
-#         if sword_draw:
+#         if sword_obj.will_draw:
 #             # check sword-bullet collision
 #             check_sword_bullet_collision()
 #
@@ -1937,8 +1927,8 @@ def pause(curr_location):
 #     global treasure_message_timer
 #     global done
 #     global on_island
-#     global sword_draw
-#     global sword_delay
+#     global sword_obj.will_draw
+#     global sword_obj.delay
 #     global curr_enemy_list
 #     global enemies_centre_island
 #     global tutorials
@@ -2048,8 +2038,8 @@ def world_map():
 #     global pause_timer
 #     global treasure_message_timer
 #     global done
-#     global sword_draw
-#     global sword_delay
+#     global sword_obj.will_draw
+#     global sword_obj.delay
 #     global curr_enemy_list
 #     global room_entry
 #     global bullets
@@ -2096,7 +2086,7 @@ def world_map():
 #         check_player_enemy_collision(dungeon_entrance_obj.enemies)
 #
 #         # code to check collision between bullet and sword
-#         if sword_draw:
+#         if sword_obj.will_draw:
 #             # check sword-bullet collision
 #             check_sword_bullet_collision()
 #
@@ -2130,8 +2120,8 @@ def world_map():
 #     global pause_timer
 #     global treasure_message_timer
 #     global done
-#     global sword_draw
-#     global sword_delay
+#     global sword_obj.will_draw
+#     global sword_obj.delay
 #     global curr_enemy_list
 #     global room_entry
 #     global bullets
@@ -2178,7 +2168,7 @@ def world_map():
 #         check_player_enemy_collision(dungeon_second_room_obj.enemies)
 #
 #         # code to check collision between bullet and sword
-#         if sword_draw:
+#         if sword_obj.will_draw:
 #             # check sword-bullet collision
 #             check_sword_bullet_collision()
 #
