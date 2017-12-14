@@ -4,7 +4,7 @@ import random
 import math
 # import pi from math
 import grid_class
-import queue
+# import queue
 
 # defining a few colours, using their RGB value
 BLACK = (0, 0, 0)
@@ -157,7 +157,7 @@ class Player(pygame.sprite.Sprite):
 
 
 # initialise player object
-player_obj = Player(350, 250, 15)
+player_obj = Player(350, 250, 30)
 
 
 # initialise island class
@@ -238,7 +238,7 @@ class Island(pygame.sprite.Sprite):
         player_obj.rect.x = self.position_x_close + (self.width / 2) - (player_obj.size / 2)
         player_obj.halt_speed()
         player_obj.invulnerable_timer = pygame.time.get_ticks()
-        player_obj.on_island = False
+        # player_obj.on_island = False
 
         # stop map sound effect
         # map.sound.stop()
@@ -283,7 +283,7 @@ class Island(pygame.sprite.Sprite):
 
             # what happens when player spawns on island
             if player_obj.on_island:
-                land_on_island(self)
+                # land_on_island(self)
                 enemy_delay(self.enemies)
 
             # code to remove enemies from island_obj.enemies list, draw them to screen, and have them attack
@@ -732,9 +732,15 @@ class Pirates(pygame.sprite.Sprite):
         super().__init__()
         self.size = size
         self.colour = colour
-        self.image = pygame.Surface([self.size, self.size])
-        self.image.fill(self.colour)
-        self.rect = self.image.get_rect()
+        # self.image = pygame.Surface([self.size, self.size])
+        # self.image.fill(self.colour)
+        self.image1 = pygame.image.load("Pirate_spr.png").convert()
+        self.image1.set_colorkey(WHITE)
+        self.image2 = pygame.image.load("Pirate_spr_2.png").convert()
+        self.image2.set_colorkey(WHITE)
+        self.curr_image = self.image1
+        self.image_timer = 0
+        self.rect = self.curr_image.get_rect()
         self.rect.x = start_x  # enemy x position
         self.rect.y = start_y  # enemy y position
         self.health = 2  # integer for health value, each hit does damage of 2
@@ -770,7 +776,15 @@ class Pirates(pygame.sprite.Sprite):
             self.attack_timer = pygame.time.get_ticks()
 
     def draw(self, screen):
-        pygame.draw.rect(screen, self.colour, self.rect)
+        # pygame.draw.rect(screen, self.colour, self.rect)
+        # code to ensure correct image is drawn
+        if pygame.time.get_ticks() - self.image_timer > 750:
+            if self.curr_image == self.image1:
+                self.curr_image = self.image2
+            else:
+                self.curr_image = self.image1
+            self.image_timer = pygame.time.get_ticks()
+        screen.blit(self.curr_image, [self.rect.x, self.rect.y])
 
 
 # initialise bullet class, for enemy attacks
@@ -818,8 +832,8 @@ class BreakObject(pygame.sprite.Sprite):
 class Sword(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.width = 11
-        self.height = 11
+        self.width = 22
+        self.height = 22
         # load pygame image sprite
         self.image = pygame.image.load("Sword_spr.png").convert()
         self.image.set_colorkey(WHITE)
@@ -853,7 +867,7 @@ class Sword(pygame.sprite.Sprite):
         if player_obj.last_y > 0:
             self.curr_image = self.image_down
             self.rect = self.image.get_rect()
-            self.rect.y = player_obj.rect.y + player_obj.size - 5
+            self.rect.y = player_obj.rect.y + player_obj.size - 10
         elif player_obj.last_y < 0:
             self.curr_image = self.image_up
             self.rect = self.image.get_rect()
@@ -1047,7 +1061,7 @@ def island_spawn():
 def island_moving_enemy_spawn(location, location_list, enemy_num, type):
     # for loop determining enemy spawn
     for index in range(enemy_num):
-        enemy_obj = Ghosts(20, MOVING_ENEMY_PURPLE, 0, 0)
+        enemy_obj = Ghosts(40, MOVING_ENEMY_PURPLE, 0, 0)
         enemies.add(enemy_obj)
         location_list.add(enemy_obj)
     # random spawn location code
@@ -1076,7 +1090,7 @@ def island_gun_enemy_spawn(location, location_list, enemy_num):
     global enemies
     # for loop determining enemy spawn
     for index in range(enemy_num):
-        enemy_obj = Pirates(20, GUN_ENEMY_BLUE, 0, 0)
+        enemy_obj = Pirates(40, GUN_ENEMY_BLUE, 0, 0)
         location_list.add(enemy_obj)
         enemies.add(enemy_obj)
     # random spawn location code
@@ -1104,12 +1118,12 @@ def dungeon_enemy_spawn(location, location_list, moving_enemy_num, gun_enemy_num
     global enemies
     # for loop to determine moving enemy spawn
     for index in range(moving_enemy_num):
-        enemy_obj = Ghosts(20, MOVING_ENEMY_PURPLE, 0, 0)
+        enemy_obj = Ghosts(40, MOVING_ENEMY_PURPLE, 0, 0)
         enemies.add(enemy_obj)
         location_list.add(enemy_obj)
     # for loop to determine gun enemy spawn
     for index in range(gun_enemy_num):
-        enemy_obj = Pirates(20, GUN_ENEMY_BLUE, 0, 0)
+        enemy_obj = Pirates(40, GUN_ENEMY_BLUE, 0, 0)
         location_list.add(enemy_obj)
         enemies.add(enemy_obj)
     # random spawn location code
@@ -1255,6 +1269,7 @@ def enemy_delay(location_enemies):
             enemy.attack_timer = pygame.time.get_ticks() - random.randrange(1000)
         else:
             enemy.attack_timer = pygame.time.get_ticks() - 1500
+    player_obj.on_island = False
 
 
 # procedure for when player enters dungeon room from bottom
