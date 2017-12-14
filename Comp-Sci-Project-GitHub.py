@@ -46,12 +46,30 @@ class Player(pygame.sprite.Sprite):
         self.speed = 4  # player speed variable
         self.size = player_size  # player rectangle size
         self.colour = RED  # set player colour
-        self.image = pygame.Surface([self.size, self.size])
-        self.image.fill(self.colour)
-        self.rect = self.image.get_rect()
+        # self.image = pygame.Surface([self.size, self.size])
+        # self.image.fill(self.colour)
+        self.down_image1 = pygame.image.load("Walking_player_spr.png").convert()
+        self.down_image1.set_colorkey(WHITE)
+        self.down_image2 = pygame.image.load("Walking_player_spr_2.png").convert()
+        self.down_image2.set_colorkey(WHITE)
+        self.up_image1 = pygame.image.load("Walking_back_player_spr.png").convert()
+        self.up_image1.set_colorkey(WHITE)
+        self.up_image2 = pygame.image.load("Walking_back_player_spr_2.png").convert()
+        self.up_image2.set_colorkey(WHITE)
+        self.left_image1 = pygame.image.load("Walking_left_player_spr.png").convert()
+        self.left_image1.set_colorkey(WHITE)
+        self.left_image2 = pygame.image.load("Walking_left_player_spr_2.png").convert()
+        self.left_image2.set_colorkey(WHITE)
+        self.right_image1 = pygame.image.load("Walking_right_player_spr.png").convert()
+        self.right_image1.set_colorkey(WHITE)
+        self.right_image2 = pygame.image.load("Walking_right_player_spr_2.png").convert()
+        self.right_image2.set_colorkey(WHITE)
+        self.curr_image = self.down_image1
+        self.image_timer = 0
+        self.rect = self.curr_image.get_rect()
         self.health_image = pygame.image.load("Health.png").convert()
         self.health_image.set_colorkey(WHITE)
-        self.health_rect = self.image.get_rect()
+        self.health_rect = self.health_image.get_rect()
         self.rect.x = start_x  # player x position
         self.rect.y = start_y  # player y position
         self.enemies_killed = 0
@@ -80,7 +98,32 @@ class Player(pygame.sprite.Sprite):
         self.rect.y += self.change_y
 
     def draw(self, screen):
-        pygame.draw.rect(screen, self.colour, self.rect)
+        # pygame.draw.rect(screen, self.colour, self.rect)
+        # code to ensure correct image is drawn
+        if pygame.time.get_ticks() - self.image_timer > 500:
+
+            if self.curr_image == self.up_image1:
+                self.curr_image = self.up_image2
+            elif self.curr_image == self.up_image2:
+                self.curr_image = self.up_image1
+
+            elif self.curr_image == self.left_image1:
+                self.curr_image = self.left_image2
+            elif self.curr_image == self.left_image2:
+                self.curr_image = self.left_image1
+
+            elif self.curr_image == self.right_image1:
+                self.curr_image = self.right_image2
+            elif self.curr_image == self.right_image2:
+                self.curr_image = self.right_image1
+
+            elif self.curr_image == self.down_image1:
+                self.curr_image = self.down_image2
+            elif self.curr_image == self.down_image2:
+                self.curr_image = self.down_image1
+
+            self.image_timer = pygame.time.get_ticks()
+        screen.blit(self.curr_image, [self.rect.x, self.rect.y])
 
     def take_damage(self, damage):
         self.health -= damage  # take away enemy damage from player health
@@ -133,6 +176,7 @@ class Island(pygame.sprite.Sprite):
             self.image.set_colorkey(WHITE)
             self.image_map = pygame.image.load("CentreIslandMap.png").convert()
             self.image_map.set_colorkey(WHITE)
+            self.door = DungeonDoor((WIDTH / 2) - 15, self.position_y_close + 40)
         else:
             self.image = pygame.image.load("SandIslandClose.png").convert()
             self.image.set_colorkey(WHITE)
@@ -158,7 +202,8 @@ class Island(pygame.sprite.Sprite):
         self.enemies = pygame.sprite.Group()  # create list of enemies per location
         # create graph with grid_class script
         self.graph = grid_class.Grid(self.height, self.width)
-        self.chest = TreasureChest(40, self.position_x_close + (self.width / 2) - 20, self.position_y_close + 40 - 20, "Example Treasure")
+        self.chest = TreasureChest(40, self.position_x_close + (self.width / 2) - 20, self.position_y_close + 40 - 20,
+                                   "Example Treasure")
 
     def draw_close(self, screen):  # drawing code for when player is on island
         # pygame.draw.rect(screen, self.colour, self.rect_close)
@@ -298,10 +343,10 @@ class Island(pygame.sprite.Sprite):
             # check if on centre island
             if self == centre_island_obj:
                 # draw the door on the island
-                central_island_door.draw(screen)
+                self.door.draw(screen)
 
                 # check collision with door on island
-                if pygame.sprite.collide_rect(player_obj, central_island_door):
+                if pygame.sprite.collide_rect(player_obj, self.door):
                     check_player_door_collision(self, dungeon_entrance_obj, dungeon_entrance_obj.enemies)
 
                 # display tutorial messages
@@ -396,11 +441,13 @@ class Dungeon(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
         self.overview = False  # boolean for if dungeon level is on screen
-        self.height = HEIGHT - 100
-        self.width = WIDTH - 100
+        self.height = 400
+        self.width = 600
         self.colour = ROCK  # stand-in colour for dungeon floor
-        self.image = pygame.Surface([self.width, self.height])
-        self.image.fill(self.colour)
+        # self.image = pygame.Surface([self.width, self.height])
+        # self.image.fill(self.colour)
+        self.image = pygame.image.load("Dungeon_floor_spr.png").convert()
+        self.image.set_colorkey(WHITE)
         self.rect = self.image.get_rect()
         self.rect.x = 50
         self.rect.y = 50
@@ -409,11 +456,12 @@ class Dungeon(pygame.sprite.Sprite):
         self.enemies = pygame.sprite.Group()  # create list of enemies per location
         # create graph with grid_class script
         self.graph = grid_class.Grid(self.height, self.width)
-        self.door = DungeonDoor(self.rect.x + ((self.width / 2) - 15), self.rect.y + 40)
+        self.door = DungeonDoor(self.rect.x + ((self.width / 2) - 15), self.rect.y - 40)
         self.room_entry = True  # boolean for if the player has entered the room
 
     def draw(self, screen):
-        pygame.draw.rect(screen, self.colour, self.rect)
+        # pygame.draw.rect(screen, self.colour, self.rect)
+        screen.blit(self.image, [self.rect.x, self.rect.y])
 
     def get_graph_position(self, item):
         # method to find item position
@@ -525,7 +573,8 @@ dungeons.add(dungeon_entrance_obj, dungeon_second_room_obj)
 class Map():
     def __init__(self):
         self.overview = False  # boolean for if map level is on screen
-        # self.sound = pygame.mixer.Sound("waves.ogg")
+        # self.water_sound = pygame.mixer.Sound("waves.ogg")
+
     def world_map(self):
         # make variables global so they can be used
         # global on_island
@@ -590,9 +639,15 @@ class Ghosts(pygame.sprite.Sprite):
         self.change_y = 0  # initial y speed
         self.size = size  # set size
         self.colour = colour  # set colour, may delegate to enemy sub-class in future
-        self.image = pygame.Surface([self.size, self.size])
-        self.image.fill(self.colour)
-        self.rect = self.image.get_rect()
+        # self.image = pygame.Surface([self.size, self.size])
+        # self.image.fill(self.colour)
+        self.image1 = pygame.image.load("Ghost_pirate.png").convert()
+        self.image1.set_colorkey(WHITE)
+        self.image2 = pygame.image.load("Ghost_pirate_2.png").convert()
+        self.image2.set_colorkey(WHITE)
+        self.curr_image = self.image1
+        self.image_timer = 0
+        self.rect = self.curr_image.get_rect()
         self.rect.x = start_x  # enemy x position
         self.rect.y = start_y  # enemy y position
         self.health = 2  # integer for health value, each hit does damage of 2
@@ -600,7 +655,7 @@ class Ghosts(pygame.sprite.Sprite):
         self.damage = 1  # boolean for damage enemy does to player health
         self.invulnerable = False  # boolean for if enemy can take damage or not
         self.invulnerable_timer = pygame.time.get_ticks()  # sets the current time as reference for invincibility
-        self.attack_timer = pygame.time.get_ticks() # timer for attack calculation
+        self.attack_timer = pygame.time.get_ticks()  # timer for attack calculation
         self.found_location = False  # boolean to check if position is correct
         # self.available_spaces = []  # list for places that can be moved to
         # self.unavailable_spaces = []  # list for places that cannot be moved to
@@ -643,9 +698,9 @@ class Ghosts(pygame.sprite.Sprite):
             # code to make enemy charge at player
             if pygame.time.get_ticks() - self.attack_timer > 2000:
                 x_direction = (player_obj.rect.x - self.rect.x) / math.sqrt((player_obj.rect.x - self.rect.x) ** 2 +
-                                                                                   (player_obj.rect.y - self.rect.y) ** 2)
+                                                                            (player_obj.rect.y - self.rect.y) ** 2)
                 y_direction = (player_obj.rect.y - self.rect.y) / math.sqrt((player_obj.rect.x - self.rect.x) ** 2 +
-                                                                                   (player_obj.rect.y - self.rect.y) ** 2)
+                                                                            (player_obj.rect.y - self.rect.y) ** 2)
                 self.change_x = x_direction * 3
                 self.change_y = y_direction * 3
                 self.attack_timer = pygame.time.get_ticks() - random.randrange(1000)
@@ -661,8 +716,15 @@ class Ghosts(pygame.sprite.Sprite):
         self.rect.y += self.change_y
 
     def draw(self, screen):
-        pygame.draw.rect(screen, self.colour, self.rect)
-
+        # pygame.draw.rect(screen, self.colour, self.rect)
+        # code to ensure correct image is drawn
+        if pygame.time.get_ticks() - self.image_timer > 750:
+            if self.curr_image == self.image1:
+                self.curr_image = self.image2
+            else:
+                self.curr_image = self.image1
+            self.image_timer = pygame.time.get_ticks()
+        screen.blit(self.curr_image, [self.rect.x, self.rect.y])
 
 # class for stationary, shooting enemies
 class Pirates(pygame.sprite.Sprite):
@@ -756,10 +818,10 @@ class BreakObject(pygame.sprite.Sprite):
 class Sword(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.width = 15
-        self.height = 15
+        self.width = 11
+        self.height = 11
         # load pygame image sprite
-        self.image = pygame.image.load("Sword.png").convert()
+        self.image = pygame.image.load("Sword_spr.png").convert()
         self.image.set_colorkey(WHITE)
         self.rect = self.image.get_rect()
         self.rect.x = player_obj.rect.x + player_obj.size
@@ -772,7 +834,6 @@ class Sword(pygame.sprite.Sprite):
         self.curr_image = self.image_up
         self.delay = pygame.time.get_ticks()  # amount of milliseconds before sword sprite disappears
         self.will_draw = False  # boolean to draw sword object onto screen
-
 
     def draw(self, screen):
         screen.blit(self.curr_image, [self.rect.x, self.rect.y])
@@ -792,7 +853,7 @@ class Sword(pygame.sprite.Sprite):
         if player_obj.last_y > 0:
             self.curr_image = self.image_down
             self.rect = self.image.get_rect()
-            self.rect.y = player_obj.rect.y + player_obj.size
+            self.rect.y = player_obj.rect.y + player_obj.size - 5
         elif player_obj.last_y < 0:
             self.curr_image = self.image_up
             self.rect = self.image.get_rect()
@@ -926,12 +987,12 @@ treasure_message_display = False  # boolean for if treasure chest message should
 centre_island_obj.overview = True  # make sure player spawns on central island
 game_end = False  # boolean to check if game is done or not
 # create dungeon door objects and list
-central_island_door = DungeonDoor((WIDTH / 2) - 15,
-                                  centre_island_obj.position_y_close + 40)
-dungeon_entrance_door = DungeonDoor(dungeon_entrance_obj.rect.x + ((dungeon_entrance_obj.width / 2) - 15),
-                                    dungeon_entrance_obj.rect.y + 40)
+# central_island_door = DungeonDoor((WIDTH / 2) - 15,
+#                                   centre_island_obj.position_y_close + 40)
+# dungeon_entrance_door = DungeonDoor(dungeon_entrance_obj.rect.x + ((dungeon_entrance_obj.width / 2) - 15),
+#                                     dungeon_entrance_obj.rect.y + 40)
 doors = pygame.sprite.Group()
-doors.add(central_island_door, dungeon_entrance_door)
+# doors.add(central_island_obj.door, dungeon_entrance_obj.door)
 # create breakable object objects
 centre_pot_obj = BreakObject(40, (WIDTH / 2) - 20, centre_island_obj.position_y_close + 40)
 centre_island_obj.breakables.add(centre_pot_obj)
@@ -950,13 +1011,14 @@ available_spaces = []
 unavailable_spaces = []
 visited = []
 
-
 # create list of all game locations
 locations = pygame.sprite.Group()
 locations.add(island_obj, island2_obj, island3_obj, island4_obj)
 locations.add(centre_island_obj)
 locations.add(dungeon_entrance_obj)
 locations.add(dungeon_second_room_obj)
+
+
 # locations.add(map)
 
 # function to spawn islands on map
@@ -992,8 +1054,10 @@ def island_moving_enemy_spawn(location, location_list, enemy_num, type):
     for enemy in location_list:
         location_list.remove(enemy)
         while not enemy.found_location:
-            enemy.rect.x = random.randrange(location.position_x_close + 1, location.position_x_close + location.width - 21)
-            enemy.rect.y = random.randrange(location.position_y_close + 1, location.position_y_close + location.height - 61)
+            enemy.rect.x = random.randrange(location.position_x_close + 1,
+                                            location.position_x_close + location.width - 21)
+            enemy.rect.y = random.randrange(location.position_y_close + 1,
+                                            location.position_y_close + location.height - 61)
             enemy_pos = location.graph.find_grid_position(enemy, location)
             # print(enemy_pos)
             # location.place_in_graph(enemy, location.get_graph_position(enemy))
@@ -1019,8 +1083,10 @@ def island_gun_enemy_spawn(location, location_list, enemy_num):
     for enemy in location_list:
         location_list.remove(enemy)
         while not enemy.found_location:
-            enemy.rect.x = random.randrange(location.position_x_close + 1, location.position_x_close + location.width - 21)
-            enemy.rect.y = random.randrange(location.position_y_close + 1, location.position_y_close + location.height - 61)
+            enemy.rect.x = random.randrange(location.position_x_close + 1,
+                                            location.position_x_close + location.width - 21)
+            enemy.rect.y = random.randrange(location.position_y_close + 1,
+                                            location.position_y_close + location.height - 61)
             # enemy_pos = location.get_graph_position(enemy)
             enemy_pos = location.graph.find_grid_position(enemy, location)
             location.place_in_graph(enemy, enemy_pos)
@@ -1334,10 +1400,15 @@ def check_player_bullet_collision():
 # procedure to check for collision between player and door
 def check_player_door_collision(curr_location, destination, destination_enemies_list):
     # collision code
-    door_hit = pygame.sprite.spritecollideany(player_obj, doors)
-    door_hit.check_open(curr_location)
-    if door_hit.can_open:
-        door_hit.open_door(curr_location, destination, destination_enemies_list)
+    # door_hit = pygame.sprite.spritecollideany(player_obj, doors)
+    # if door_hit:
+    #     door_hit.check_open(curr_location)
+    # if door_hit.can_open:
+    #     door_hit.open_door(curr_location, destination, destination_enemies_list)
+    if pygame.sprite.collide_rect(player_obj, curr_location.door):
+        curr_location.door.check_open(curr_location)
+    if curr_location.door.can_open:
+        curr_location.door.open_door(curr_location, destination, destination_enemies_list)
 
 
 # procedure to ensure map wrap around to keep player on screen
@@ -1391,18 +1462,26 @@ def location_movement(curr_location, location_list):
                 player_obj.change_y = -player_obj.speed
                 player_obj.last_y = -1
                 player_obj.last_x = 0
+                player_obj.curr_image = player_obj.up_image1
+                player_obj.image_timer = pygame.time.get_ticks()
             if event.key == pygame.K_DOWN or event.key == pygame.K_s:
                 player_obj.change_y = player_obj.speed
                 player_obj.last_y = 1
                 player_obj.last_x = 0
+                player_obj.curr_image = player_obj.down_image1
+                player_obj.image_timer = pygame.time.get_ticks()
             if event.key == pygame.K_LEFT or event.key == pygame.K_a:
                 player_obj.change_x = -player_obj.speed
                 player_obj.last_y = 0
                 player_obj.last_x = -1
+                player_obj.curr_image = player_obj.left_image1
+                player_obj.image_timer = pygame.time.get_ticks()
             if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                 player_obj.change_x = player_obj.speed
                 player_obj.last_y = 0
                 player_obj.last_x = 1
+                player_obj.curr_image = player_obj.right_image1
+                player_obj.image_timer = pygame.time.get_ticks()
             if event.key == pygame.K_p:
                 player_obj.pause_timer = pygame.time.get_ticks()
                 pause(curr_location)
