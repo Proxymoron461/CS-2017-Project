@@ -34,17 +34,19 @@ pygame.init()
 # setting the borderless window
 size = (WIDTH, HEIGHT)
 screen = pygame.display.set_mode(size)
-pygame.display.set_caption("Pirate Game")  # sets the window title
+pygame.display.set_caption("Pyrate!")  # sets the window title
 
 
 # initialise player class
 class Player(pygame.sprite.Sprite):
-    def __init__(self, start_x, start_y, player_size):
+    def __init__(self, start_x, start_y):
         super().__init__()
         self.change_x = 0  # player speed left and right, starts at 0
         self.change_y = 0  # player speed up and down, starts at 0
         self.speed = 4  # player speed variable
-        self.size = player_size  # player rectangle size
+        self.size = 30  # player rectangle size
+        self.height = 30
+        self.width = 18
         self.colour = RED  # set player colour
         # self.image = pygame.Surface([self.size, self.size])
         # self.image.fill(self.colour)
@@ -67,6 +69,7 @@ class Player(pygame.sprite.Sprite):
         self.curr_image = self.down_image1
         self.image_timer = 0
         self.rect = self.curr_image.get_rect()
+        # self.mask = pygame.mask.from_surface(self.curr_image)
         self.health_image = pygame.image.load("Health.png").convert()
         self.health_image.set_colorkey(WHITE)
         self.health_rect = self.health_image.get_rect()
@@ -157,7 +160,7 @@ class Player(pygame.sprite.Sprite):
 
 
 # initialise player object
-player_obj = Player(350, 250, 30)
+player_obj = Player(350, 250)
 
 
 # initialise island class
@@ -449,6 +452,8 @@ class Dungeon(pygame.sprite.Sprite):
         self.image = pygame.image.load("Dungeon_floor_spr.png").convert()
         self.image.set_colorkey(WHITE)
         self.rect = self.image.get_rect()
+        self.wall_image = pygame.image.load("Dungeon_wall_spr.png").convert()
+        self.wall_image.set_colorkey(WHITE)
         self.rect.x = 50
         self.rect.y = 50
         self.chest_open = False  # boolean for if chest is open
@@ -496,7 +501,10 @@ class Dungeon(pygame.sprite.Sprite):
             location_movement(self, self.enemies)
 
             # fill screen background
-            screen.fill(BLACK)
+            # screen.fill(BLACK)
+
+            # display background image
+            screen.blit(self.wall_image, [0, 0])
 
             # draw dungeon entrance floor
             dungeon_entrance_obj.draw(screen)
@@ -633,12 +641,12 @@ map = Map()
 
 # initialise moving enemy class, intended as parent class for future enemies
 class Ghosts(pygame.sprite.Sprite):
-    def __init__(self, size, colour, start_x, start_y):
+    def __init__(self, start_x, start_y):
         super().__init__()
         self.change_x = 0  # initial x speed
         self.change_y = 0  # initial y speed
-        self.size = size  # set size
-        self.colour = colour  # set colour, may delegate to enemy sub-class in future
+        self.height = 36  # set size
+        self.width = 28
         # self.image = pygame.Surface([self.size, self.size])
         # self.image.fill(self.colour)
         self.image1 = pygame.image.load("Ghost_pirate.png").convert()
@@ -648,6 +656,7 @@ class Ghosts(pygame.sprite.Sprite):
         self.curr_image = self.image1
         self.image_timer = 0
         self.rect = self.curr_image.get_rect()
+        # self.mask = pygame.mask.from_surface(self.curr_image)
         self.rect.x = start_x  # enemy x position
         self.rect.y = start_y  # enemy y position
         self.health = 2  # integer for health value, each hit does damage of 2
@@ -728,10 +737,12 @@ class Ghosts(pygame.sprite.Sprite):
 
 # class for stationary, shooting enemies
 class Pirates(pygame.sprite.Sprite):
-    def __init__(self, size, colour, start_x, start_y):
+    def __init__(self, start_x, start_y):
         super().__init__()
-        self.size = size
-        self.colour = colour
+        # self.size = size
+        self.height = 38
+        self.width = 24
+        # self.colour = colour
         # self.image = pygame.Surface([self.size, self.size])
         # self.image.fill(self.colour)
         self.image1 = pygame.image.load("Pirate_spr.png").convert()
@@ -741,6 +752,7 @@ class Pirates(pygame.sprite.Sprite):
         self.curr_image = self.image1
         self.image_timer = 0
         self.rect = self.curr_image.get_rect()
+        # self.mask = pygame.mask.from_surface(self.curr_image)
         self.rect.x = start_x  # enemy x position
         self.rect.y = start_y  # enemy y position
         self.health = 2  # integer for health value, each hit does damage of 2
@@ -795,6 +807,7 @@ class Bullet(pygame.sprite.Sprite):
         self.image = pygame.image.load("Bullet.png").convert()
         self.image.set_colorkey(WHITE)
         self.rect = self.image.get_rect()
+        # self.mask = pygame.mask.from_surface(self.image)
         self.rect.x = start_x
         self.rect.y = start_y
         self.x_speed = x_speed
@@ -857,17 +870,17 @@ class Sword(pygame.sprite.Sprite):
         if player_obj.last_x > 0:
             self.curr_image = self.image_right
             self.rect = self.image.get_rect()
-            self.rect.x = player_obj.rect.x + player_obj.size
+            self.rect.x = player_obj.rect.x + player_obj.width - 2
         elif player_obj.last_x < 0:
             self.curr_image = self.image_left
             self.rect = self.image.get_rect()
-            self.rect.x = player_obj.rect.x - self.height
+            self.rect.x = player_obj.rect.x - self.height + 2
 
         # code to put rectangle y value at area where character is facing
         if player_obj.last_y > 0:
             self.curr_image = self.image_down
             self.rect = self.image.get_rect()
-            self.rect.y = player_obj.rect.y + player_obj.size - 10
+            self.rect.y = player_obj.rect.y + player_obj.height - 10
         elif player_obj.last_y < 0:
             self.curr_image = self.image_up
             self.rect = self.image.get_rect()
@@ -875,9 +888,9 @@ class Sword(pygame.sprite.Sprite):
 
         # code to set sword position if character facing opposite plane
         if player_obj.last_x == 0:
-            self.rect.x = player_obj.rect.x + (player_obj.size / 2) - (self.width / 2)
+            self.rect.x = player_obj.rect.x + (player_obj.width / 2) - (self.width / 2)
         if player_obj.last_y == 0:
-            self.rect.y = player_obj.rect.y + (player_obj.size / 2) - (self.width / 2)
+            self.rect.y = player_obj.rect.y + (player_obj.height / 2) - (self.width / 2)
 
     def attack_collision(self, enemy_list):
         # create list of enemies hit by player sword
@@ -1061,7 +1074,7 @@ def island_spawn():
 def island_moving_enemy_spawn(location, location_list, enemy_num, type):
     # for loop determining enemy spawn
     for index in range(enemy_num):
-        enemy_obj = Ghosts(40, MOVING_ENEMY_PURPLE, 0, 0)
+        enemy_obj = Ghosts(0, 0)
         enemies.add(enemy_obj)
         location_list.add(enemy_obj)
     # random spawn location code
@@ -1090,7 +1103,7 @@ def island_gun_enemy_spawn(location, location_list, enemy_num):
     global enemies
     # for loop determining enemy spawn
     for index in range(enemy_num):
-        enemy_obj = Pirates(40, GUN_ENEMY_BLUE, 0, 0)
+        enemy_obj = Pirates(0, 0)
         location_list.add(enemy_obj)
         enemies.add(enemy_obj)
     # random spawn location code
@@ -1118,12 +1131,12 @@ def dungeon_enemy_spawn(location, location_list, moving_enemy_num, gun_enemy_num
     global enemies
     # for loop to determine moving enemy spawn
     for index in range(moving_enemy_num):
-        enemy_obj = Ghosts(40, MOVING_ENEMY_PURPLE, 0, 0)
+        enemy_obj = Ghosts(0, 0)
         enemies.add(enemy_obj)
         location_list.add(enemy_obj)
     # for loop to determine gun enemy spawn
     for index in range(gun_enemy_num):
-        enemy_obj = Pirates(40, GUN_ENEMY_BLUE, 0, 0)
+        enemy_obj = Pirates(0, 0)
         location_list.add(enemy_obj)
         enemies.add(enemy_obj)
     # random spawn location code
