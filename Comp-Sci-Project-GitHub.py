@@ -825,12 +825,14 @@ class Bullet(pygame.sprite.Sprite):
 
 # create class of breakable objects
 class BreakObject(pygame.sprite.Sprite):
-    def __init__(self, size, x_position, y_position):
+    def __init__(self, x_position, y_position):
         super().__init__()
-        self.size = size
-        self.colour = BROWN
-        self.image = pygame.Surface([self.size, self.size])
-        self.image.fill(self.colour)
+        self.size = 40
+        # self.colour = BROWN
+        # self.image = pygame.Surface([self.size, self.size])
+        # self.image.fill(self.colour)
+        self.image = pygame.image.load("Break_object.png").convert()
+        self.image.set_colorkey(WHITE)
         self.rect = self.image.get_rect()
         self.rect.x = x_position
         self.rect.y = y_position
@@ -838,7 +840,8 @@ class BreakObject(pygame.sprite.Sprite):
 
     def draw(self, screen):
         if not self.broken:
-            pygame.draw.rect(screen, self.colour, self.rect)
+            # pygame.draw.rect(screen, self.colour, self.rect)
+            screen.blit(self.image, [self.rect.x, self.rect.y])
 
 
 # initialise sword class, for attacking
@@ -989,8 +992,82 @@ class TutorialRect(pygame.sprite.Sprite):
 #         self.sound = pygame.mixer.Sound(name)
 #
 
+
+# create class for menu in-game
+class Menu():
+    def __init__(self):
+        self.logo = pygame.image.load("Menu_logo.png").convert()
+        self.logo.set_colorkey(WHITE)
+        self.start = pygame.image.load("Menu_start.png").convert()
+        self.start.set_colorkey(WHITE)
+        self.quit = pygame.image.load("Menu_quit.png").convert()
+        self.quit.set_colorkey(WHITE)
+        self.sword = pygame.image.load("Menu_sword.png").convert()
+        self.sword.set_colorkey(WHITE)
+        self.sword_rect = self.sword.get_rect()
+        self.sword_position = 0
+        self.menu_icons = 2  # attribute for total number of menu icons
+        self.menu = True
+
+    def display_menu(self):
+        # method to show game initial menu to screen while menu attribute true
+
+        while self.menu:
+            # fill screen with background colour
+            screen.fill(SEA_BLUE)
+
+            # handle player input to move sword sprite for selection
+            self.menu_input()
+
+            # draw menu icons to screen
+            screen.blit(self.logo, [175, 50])
+            screen.blit(self.start, [200, 200])
+            screen.blit(self.quit, [200, 350])
+            screen.blit(self.sword, [125, self.sword_rect.y])
+
+            # draw basic text to screen
+            output_text = font.render("Use UP, DOWN and SPACE to make your choice.", True, BLACK)
+            screen.blit(output_text, [170, 450])
+
+            # update screen and framerate
+            screen_update()
+
+    def menu_input(self):
+        # method to take player inputs and move the sword position accordingly
+        # make variables global so they can be used
+        global done
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT or event.type == pygame.K_ESCAPE:
+                done = True
+                self.menu = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    self.sword_position = (self.sword_position - 1) % self.menu_icons
+                if event.key == pygame.K_DOWN:
+                    self.sword_position = (self.sword_position + 1) % self.menu_icons
+                if event.key == pygame.K_SPACE:
+                    if self.sword_position == 0:
+                        self.start_game()
+                    elif self.sword_position == 1:
+                        done = True
+                        self.menu = False
+
+        # code for drawing sword to correct position
+        if self.sword_position == 0:
+            self.sword_rect.y = 212
+        elif self.sword_position == 1:
+            self.sword_rect.y = 362
+
+    def start_game(self):
+        self.menu = False
+        map.overview = True
+        centre_island_obj.overview = True  # make sure player spawns on central island
+
+
 # miscellaneous values
-map.overview = True  # boolean for when player is in map
+# map.overview = True  # boolean for when player is in map
+menu_obj = Menu()
 # on_island = False  # boolean for when player gets onto island
 island_obj = Island(300, 300, 0, 0, "sand")  # create first island object
 island2_obj = Island(300, 300, 0, 0, "grass")  # create second island object
@@ -1011,7 +1088,7 @@ enemy_move_timer = 0  # timer for when enemy can calculate movement
 chests = pygame.sprite.Group()  # group for all chests in game
 curr_enemy_list = enemies  # current list for enemy collision
 treasure_message_display = False  # boolean for if treasure chest message should be displayed
-centre_island_obj.overview = True  # make sure player spawns on central island
+# centre_island_obj.overview = True  # make sure player spawns on central island
 game_end = False  # boolean to check if game is done or not
 # create dungeon door objects and list
 # central_island_door = DungeonDoor((WIDTH / 2) - 15,
@@ -1021,7 +1098,7 @@ game_end = False  # boolean to check if game is done or not
 doors = pygame.sprite.Group()
 # doors.add(central_island_obj.door, dungeon_entrance_obj.door)
 # create breakable object objects
-centre_pot_obj = BreakObject(40, (WIDTH / 2) - 20, centre_island_obj.position_y_close + 40)
+centre_pot_obj = BreakObject((WIDTH / 2) - 20, centre_island_obj.position_y_close + 45)
 centre_island_obj.breakables.add(centre_pot_obj)
 # create objects for tutorial messages and list of them
 centre_sword_tutorial = TutorialRect(30, 30, (WIDTH / 2 - 15),
@@ -1048,11 +1125,11 @@ locations.add(dungeon_second_room_obj)
 
 # locations.add(map)
 
-# function to spawn islands on map
+# procedure to spawn islands on map
 def island_spawn():
     # generate list of island positions for use
-    x_position_list = [25, 75, 100, 125, 150, 175, 200, 250, 275, 300, 325, 350, 375, 425, 450, 475, 500, 550, 525, 575]
-    y_position_list = [25, 75, 100, 150, 175, 200, 225, 250, 275, 325, 375]
+    x_position_list = [25, 75, 100, 125, 150, 175, 200, 250, 275, 300, 350, 425, 450, 475, 500, 550, 525, 575]
+    y_position_list = [25, 75, 100, 150, 175, 200, 225, 250, 275, 325]
     # assign island positions to each island, except for centre_island
     for island in islands:
         islands.remove(island)
@@ -1125,7 +1202,7 @@ def island_gun_enemy_spawn(location, location_list, enemy_num):
                 enemies.add(enemy)
 
 
-# function to spawn enemies in dungeon
+# procedure to spawn enemies in dungeon
 def dungeon_enemy_spawn(location, location_list, moving_enemy_num, gun_enemy_num):
     # make variables global
     global enemies
@@ -1267,7 +1344,7 @@ def land_on_island(curr_island):
     # global on_island
     # code to determine player position
     player_obj.rect.y = curr_island.position_y_close + (curr_island.height * 0.8)
-    player_obj.rect.x = curr_island.position_x_close + (curr_island.width / 2) - (player_obj.size / 2)
+    player_obj.rect.x = curr_island.position_x_close + (curr_island.width / 2) - (player_obj.width / 2)
     player_obj.halt_speed()
     player_obj.invulnerable_timer = pygame.time.get_ticks()
     player_obj.on_island = False
@@ -1540,7 +1617,7 @@ def pause_interaction(curr_location):
                 paused = False
 
 
-# function for key presses while on endgame screen
+# procedure for key presses while on endgame screen
 def end_game_interaction():
     # make variables global
     global done
@@ -1706,6 +1783,9 @@ def pause(curr_location):
 # main program loop
 while not done:
     # if in an area, activate its' procedure for overview
+    if menu_obj.menu:
+        menu_obj.display_menu()
+
     if map.overview:
         map.world_map()
 
