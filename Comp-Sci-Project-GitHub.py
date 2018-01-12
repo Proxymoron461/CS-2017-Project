@@ -92,8 +92,8 @@ class Player(pygame.sprite.Sprite):
         self.on_island = False  # boolean for tracking if the player landed on an island
 
     def move_map(self):
-        self.rect.x += self.change_x
-        self.rect.y += self.change_y
+        self.rect.x += (self.change_x * 0.5)
+        self.rect.y += (self.change_y * 0.5)
 
     def move_close(self, location_rect):
         self.rect.clamp_ip(location_rect)  # keep player on island
@@ -274,12 +274,18 @@ class Island(pygame.sprite.Sprite):
         # ensure player speed does not carry over
         player_obj.halt_speed()
 
+        # reset map ocean timer
+        map.ocean_switch_timer = 0
+
         while self.overview:
             # code for key presses + movement
             location_movement(self, self.enemies)
 
             # fill screen with background colour
             screen.fill(SEA_BLUE)
+
+            # draw ocean to screen
+            map.draw_ocean_island()
 
             # draw the island up close
             self.draw_close(screen)
@@ -581,6 +587,20 @@ dungeons.add(dungeon_entrance_obj, dungeon_second_room_obj)
 class Map():
     def __init__(self):
         self.overview = False  # boolean for if map level is on screen
+        self.ocean_image_1 = pygame.image.load("Ocean_1.png").convert()
+        self.ocean_image_1.set_colorkey(BLACK)
+        self.ocean_image_2 = pygame.image.load("Ocean_2.png").convert()
+        self.ocean_image_2.set_colorkey(BLACK)
+        self.calm_ocean = pygame.image.load("Base_ocean.png").convert()
+        self.calm_ocean.set_colorkey(BLACK)
+        self.island_ocean_1 = pygame.image.load("Island_ocean.png").convert()
+        self.island_ocean_1.set_colorkey(BLACK)
+        self.island_ocean_2 = pygame.image.load("Island_ocean_2.png").convert()
+        self.island_ocean_2.set_colorkey(BLACK)
+        self.ocean_switch = False
+        self.curr_image = self.ocean_image_1
+        self.curr_image_island = self.island_ocean_1
+        self.ocean_switch_timer = 0
         # self.water_sound = pygame.mixer.Sound("waves.ogg")
 
     def world_map(self):
@@ -595,6 +615,9 @@ class Map():
         # begin playing wave sound
         # self.sound.play()
 
+        # reset ocean display timer
+        map.ocean_switch_timer = 0
+
         # map loop
         while self.overview:
             # procedure for key presses and movement
@@ -602,6 +625,9 @@ class Map():
 
             # fill screen with background colour
             screen.fill(SEA_BLUE)
+
+            # draw map to screen
+            map.draw_ocean_map()
 
             # draw all islands on map
             for island in islands:
@@ -633,6 +659,34 @@ class Map():
             player_obj.rect.y = HEIGHT + player_obj.speed
         elif player_obj.rect.y > HEIGHT:
             player_obj.rect.y = (0 - player_obj.size) - player_obj.speed
+
+    # method to draw ocean background on map screen
+    def draw_ocean_map(self):
+        if pygame.time.get_ticks() - self.ocean_switch_timer >= 1000:
+            if self.ocean_switch:
+                self.curr_image = self.ocean_image_1
+                self.ocean_switch_timer = pygame.time.get_ticks()
+                self.ocean_switch = False
+            else:
+                self.curr_image = self.ocean_image_2
+                self.ocean_switch_timer = pygame.time.get_ticks()
+                self.ocean_switch = True
+
+        screen.blit(self.curr_image, [0, 0])
+
+    # method to draw ocean background on island screen
+    def draw_ocean_island(self):
+        if pygame.time.get_ticks() - self.ocean_switch_timer >= 500:
+            if self.ocean_switch:
+                self.curr_image_island = self.island_ocean_1
+                self.ocean_switch_timer = pygame.time.get_ticks()
+                self.ocean_switch = False
+            else:
+                self.curr_image_island = self.island_ocean_2
+                self.ocean_switch_timer = pygame.time.get_ticks()
+                self.ocean_switch = True
+
+        screen.blit(self.curr_image_island, [0, 0])
 
 
 # create map object
@@ -1015,6 +1069,9 @@ class Menu():
         while self.menu:
             # fill screen with background colour
             screen.fill(SEA_BLUE)
+
+            # draw map to screen (a little more calm than usual ocean background)
+            screen.blit(map.calm_ocean, [0, 0])
 
             # handle player input to move sword sprite for selection
             self.menu_input()
