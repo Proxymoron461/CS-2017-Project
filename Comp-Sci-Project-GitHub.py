@@ -43,13 +43,15 @@ class Player(pygame.sprite.Sprite):
         super().__init__()
         self.change_x = 0  # player speed left and right, starts at 0
         self.change_y = 0  # player speed up and down, starts at 0
-        self.speed = 4  # player speed variable
+        self.speed = 3  # player speed variable
         self.size = 30  # player rectangle size
         self.height = 30
         self.width = 18
+        self.ship_size = 30  # integer for size of ship rectangle
         self.colour = RED  # set player colour
         # self.image = pygame.Surface([self.size, self.size])
         # self.image.fill(self.colour)
+        # set up player sprites
         self.down_image1 = pygame.image.load("Walking_player_spr.png").convert()
         self.down_image1.set_colorkey(WHITE)
         self.down_image2 = pygame.image.load("Walking_player_spr_2.png").convert()
@@ -67,8 +69,18 @@ class Player(pygame.sprite.Sprite):
         self.right_image2 = pygame.image.load("Walking_right_player_spr_2.png").convert()
         self.right_image2.set_colorkey(WHITE)
         self.curr_image = self.down_image1
+        # set up ship sprites
+        self.ship_up_spr = pygame.image.load("Ship_up_spr.png").convert()
+        self.ship_up_spr.set_colorkey(WHITE)
+        self.ship_down_spr = pygame.image.load("Ship_down_spr.png").convert()
+        self.ship_down_spr.set_colorkey(WHITE)
+        self.ship_left_spr = pygame.image.load("Ship_left_spr.png").convert()
+        self.ship_left_spr.set_colorkey(WHITE)
+        self.ship_right_spr = pygame.image.load("Ship_right_spr.png").convert()
+        self.ship_right_spr.set_colorkey(WHITE)
         self.image_timer = 0
         self.rect = self.curr_image.get_rect()
+        self.ship_rect = self.ship_up_spr.get_rect()
         # self.mask = pygame.mask.from_surface(self.curr_image)
         self.health_image = pygame.image.load("Health.png").convert()
         self.health_image.set_colorkey(WHITE)
@@ -92,8 +104,8 @@ class Player(pygame.sprite.Sprite):
         self.on_island = False  # boolean for tracking if the player landed on an island
 
     def move_map(self):
-        self.rect.x += (self.change_x * 0.5)
-        self.rect.y += (self.change_y * 0.5)
+        self.rect.x += self.change_x
+        self.rect.y += self.change_y
 
     def move_close(self, location_rect):
         self.rect.clamp_ip(location_rect)  # keep player on island
@@ -126,6 +138,10 @@ class Player(pygame.sprite.Sprite):
                 self.curr_image = self.down_image1
 
             self.image_timer = pygame.time.get_ticks()
+        screen.blit(self.curr_image, [self.rect.x, self.rect.y])
+
+    # method to draw player ship sprite to screen
+    def draw_map(self, screen):
         screen.blit(self.curr_image, [self.rect.x, self.rect.y])
 
     def take_damage(self, damage):
@@ -181,10 +197,22 @@ class Island(pygame.sprite.Sprite):
             self.image_map.set_colorkey(WHITE)
             self.door = DungeonDoor((WIDTH / 2) - 15, self.position_y_close + 40)
         else:
-            self.image = pygame.image.load("SandIslandClose.png").convert()
-            self.image.set_colorkey(WHITE)
-            self.image_map = pygame.image.load("SandIslandMap.png").convert()
-            self.image_map.set_colorkey(WHITE)
+            self.appearance = random.choice(["Sand", "Grass", "Rock"])
+            if self.appearance == "Sand":
+                self.image = pygame.image.load("SandIslandClose.png").convert()
+                self.image.set_colorkey(WHITE)
+                self.image_map = pygame.image.load("SandIslandMap.png").convert()
+                self.image_map.set_colorkey(WHITE)
+            elif self.appearance == "Grass":
+                self.image = pygame.image.load("Grass_island_spr.png").convert()
+                self.image.set_colorkey(WHITE)
+                self.image_map = pygame.image.load("Grass_map_spr.png").convert()
+                self.image_map.set_colorkey(WHITE)
+            elif self.appearance == "Rock":
+                self.image = pygame.image.load("Rock_island_spr.png").convert()
+                self.image.set_colorkey(WHITE)
+                self.image_map = pygame.image.load("Rock_island_map_spr.png").convert()
+                self.image_map.set_colorkey(WHITE)
         # self.rect = [position_x, position_y, self.height_map, self.width_map]
         # self.image = pygame.Surface([self.width_map, self.height_map])
         # self.image.fill(self.colour)
@@ -241,6 +269,9 @@ class Island(pygame.sprite.Sprite):
         player_obj.rect.x = self.position_x_close + (self.width / 2) - (player_obj.size / 2)
         player_obj.halt_speed()
         player_obj.invulnerable_timer = pygame.time.get_ticks()
+
+        # code to set player off of ship sprite
+        player_obj.curr_image = player_obj.up_image1
         # player_obj.on_island = False
 
         # stop map sound effect
@@ -261,6 +292,8 @@ class Island(pygame.sprite.Sprite):
         self.off = False
         self.chest.treasure_message_display = False  # stop displaying treasure message
         bullets.empty()  # remove all bullets from group
+        # code to set player off of ship sprite
+        player_obj.curr_image = player_obj.ship_down_spr
 
     # create location overview method
     def location_loop(self):
@@ -652,13 +685,13 @@ class Map():
     def wraparound(self):
         # if player is in map/sailing screen and they go off the edge, make them reappear on the opposite one
         if player_obj.rect.x + player_obj.size < 0:
-            player_obj.rect.x = WIDTH + player_obj.speed
+            player_obj.rect.x = WIDTH + (player_obj.speed // 2)
         elif player_obj.rect.x > WIDTH:
-            player_obj.rect.x = (0 - player_obj.size) - player_obj.speed
+            player_obj.rect.x = (0 - player_obj.size) - (player_obj.speed // 2)
         if player_obj.rect.y + player_obj.size < 0:
-            player_obj.rect.y = HEIGHT + player_obj.speed
+            player_obj.rect.y = HEIGHT + (player_obj.speed // 2)
         elif player_obj.rect.y > HEIGHT:
-            player_obj.rect.y = (0 - player_obj.size) - player_obj.speed
+            player_obj.rect.y = (0 - player_obj.size) - (player_obj.speed // 2)
 
     # method to draw ocean background on map screen
     def draw_ocean_map(self):
@@ -993,6 +1026,10 @@ class TreasureChest(pygame.sprite.Sprite):
         self.image = self.open_image
         player_obj.message(self.text)
         player_obj.inventory.append(self.treasure)
+
+    def set_treasure(self, treasure_name):
+        # method to change treasure chest treasure name
+        self.treasure = treasure_name
 
     def check_collision(self, curr_location_enemies):
         if pygame.sprite.collide_rect(player_obj,
@@ -1736,22 +1773,27 @@ def map_movement():
             done = True
             map.overview = False
         if event.type == pygame.KEYDOWN:  # if key is pressed, movement starts
+            # if pressing key, change player speed and ship sprite
             if event.key == pygame.K_UP or event.key == pygame.K_w:
-                player_obj.change_y = -player_obj.speed
+                player_obj.change_y = -(player_obj.speed - 1)
                 player_obj.last_y = -1
                 player_obj.last_x = 0
+                player_obj.curr_image = player_obj.ship_up_spr
             if event.key == pygame.K_DOWN or event.key == pygame.K_s:
-                player_obj.change_y = player_obj.speed
+                player_obj.change_y = (player_obj.speed - 1)
                 player_obj.last_y = 1
                 player_obj.last_x = 0
+                player_obj.curr_image = player_obj.ship_down_spr
             if event.key == pygame.K_LEFT or event.key == pygame.K_a:
-                player_obj.change_x = -player_obj.speed
+                player_obj.change_x = -(player_obj.speed - 1)
                 player_obj.last_y = 0
                 player_obj.last_x = -1
+                player_obj.curr_image = player_obj.ship_left_spr
             if event.key == pygame.K_RIGHT or event.key == pygame.K_d:
-                player_obj.change_x = player_obj.speed
+                player_obj.change_x = (player_obj.speed - 1)
                 player_obj.last_y = 0
                 player_obj.last_x = 1
+                player_obj.curr_image = player_obj.ship_right_spr
             if event.key == pygame.K_p:
                 player_obj.pause_timer = pygame.time.get_ticks()
                 pause(map)
@@ -1855,7 +1897,7 @@ while not done:
         end_game(screen)
 
     # display output and framerate
-    screen_update()
+    # screen_update()
 
 # closes window, exits game
 pygame.quit()
