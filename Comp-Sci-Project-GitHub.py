@@ -235,6 +235,7 @@ class Island(pygame.sprite.Sprite):
         self.graph = grid_class.Grid(self.height, self.width)
         self.chest = TreasureChest(40, self.position_x_close + (self.width / 2) - 20, self.position_y_close + 40 - 20,
                                    "Example Treasure")
+        chests.add(self.chest)  # add chest to chest sprite group
 
     def draw_close(self, screen):  # drawing code for when player is on island
         # pygame.draw.rect(screen, self.colour, self.rect_close)
@@ -1016,7 +1017,7 @@ class TreasureChest(pygame.sprite.Sprite):
         self.rect.x = position_x
         self.rect.y = position_y
         self.treasure = treasure
-        self.text = "You found the " + self.treasure + "!"
+        # self.text = "You found " + self.treasure + "!"
         self.game_end = False  # boolean for if game is ended
         self.treasure_message_timer = pygame.time.get_ticks()  # timer for displaying treasure message
         self.treasure_message_display = True  # boolean for displaying treasure message
@@ -1024,7 +1025,7 @@ class TreasureChest(pygame.sprite.Sprite):
 
     def pick_treasure(self):
         self.image = self.open_image
-        player_obj.message(self.text)
+        player_obj.message("You found " + self.treasure + "!")
         player_obj.inventory.append(self.treasure)
 
     def set_treasure(self, treasure_name):
@@ -1042,7 +1043,7 @@ class TreasureChest(pygame.sprite.Sprite):
         # code to check if treasure message should be displayed
         if self.open:
             if pygame.time.get_ticks() - self.treasure_message_timer <= 2000 and self.treasure_message_display:
-                player_obj.message(self.text)
+                player_obj.message("You found " + self.treasure + "!")
 
     def draw(self, screen):
         screen.blit(self.image, [self.rect.x, self.rect.y])
@@ -1157,9 +1158,14 @@ class Menu():
         self.menu = False
         map.overview = True
         centre_island_obj.overview = True  # make sure player spawns on central island
+        set_treasure_chests()  # call procedure to set random treasure chests
 
 
 # miscellaneous values
+# create list of all game treasure names
+treasures_list = ["The Sword of Blackbeard", "The Goblet of Avery", "The Sigil of Tew", "Barbarossa's Beard",
+                  "Sparrow's coin", "The Cutlass of Morgan", "Kidd's Pistol"]
+chests = pygame.sprite.Group()  # group for all chests in game
 # map.overview = True  # boolean for when player is in map
 menu_obj = Menu()
 # on_island = False  # boolean for when player gets onto island
@@ -1179,7 +1185,6 @@ bullets_deflected = pygame.sprite.Group()
 font = pygame.font.SysFont('Freestyle Script', 24, False, False)  # font for use in messages, with size, bold, italic
 paused = False  # boolean for if the game is paused
 enemy_move_timer = 0  # timer for when enemy can calculate movement
-chests = pygame.sprite.Group()  # group for all chests in game
 curr_enemy_list = enemies  # current list for enemy collision
 treasure_message_display = False  # boolean for if treasure chest message should be displayed
 # centre_island_obj.overview = True  # make sure player spawns on central island
@@ -1336,6 +1341,15 @@ def end_game(screen):
         end_game_interaction()
         player_obj.message("Well done! You have finished the game. Press ESC to quit.")
         screen_update()
+
+
+# procedure to set treasures in all chests
+def set_treasure_chests():
+    # for chest in chests:
+    for island in islands:
+        island.chest.set_treasure(random.choice(treasures_list))
+        print(island.chest.treasure)
+        treasures_list.remove(island.chest.treasure)
 
 
 # procedure to keep timers ticking over while paused
@@ -1807,13 +1821,13 @@ def map_movement():
 
 
 # create chest objects and add them to chests list
-island_chest = TreasureChest(40, island_obj.position_x_close + (island_obj.width / 2) - 20,
-                             island_obj.position_y_close + 40 - 20, "Goblet of Blackbeard")
-chests.add(island_chest)
-
-island_2_chest = TreasureChest(40, island2_obj.position_x_close + (island2_obj.width / 2) - 20,
-                               island2_obj.position_y_close + 40 - 20, "Coin of Avery")
-chests.add(island_2_chest)
+# island_chest = TreasureChest(40, island_obj.position_x_close + (island_obj.width / 2) - 20,
+#                              island_obj.position_y_close + 40 - 20, "Goblet of Blackbeard")
+# chests.add(island_chest)
+#
+# island_2_chest = TreasureChest(40, island2_obj.position_x_close + (island2_obj.width / 2) - 20,
+#                                island2_obj.position_y_close + 40 - 20, "Coin of Avery")
+# chests.add(island_2_chest)
 end_chest = TreasureChest(40, (WIDTH / 2) - 20, (HEIGHT / 2) - 20, "Ultimate pirate treasure")
 chests.add(end_chest)
 
