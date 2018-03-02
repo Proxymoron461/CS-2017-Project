@@ -21,10 +21,6 @@ class Grid:
         # take position input list of [x, y], and return list of available positions [x, y]
         neighbours = []
         return_neighbours = []
-##        up_neighbour = [position[0], position[1] - 1]
-##        down_neighbour = [position[0], position[1] + 1]
-##        left_neighbour = [position[0] - 1, position[1]]
-##        right_neighbour = [position[0] + 1, position[1]]
         neighbours.append((position[0], position[1] - 1))
         neighbours.append((position[0], position[1] + 1))
         neighbours.append((position[0] - 1, position[1]))
@@ -35,7 +31,6 @@ class Grid:
         return return_neighbours
 
     def find_best_neighbour(self, start, target):
-        neighbours = []
         up_neighbour = [start[0], start[1] - 1]
         down_neighbour = [start[0], start[1] + 1]
         left_neighbour = [start[0] - 1, start[1]]
@@ -88,7 +83,6 @@ class Grid:
                     return [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
                 
     def remove_position(self, position):
-        # self.no_go_list.append(position)
         self.position_list.remove(position)
 
     def add_position(self, position):
